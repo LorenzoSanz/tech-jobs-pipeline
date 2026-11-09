@@ -1,7 +1,7 @@
 # swiss-tech-jobs-pipeline
 
-Collects public tech job postings relevant to Switzerland and turns them into a
-chronological dataset of what the market asks for: technologies, roles,
+Collects public tech job postings for Switzerland, Spain and the rest of Europe
+and turns them into a chronological dataset of what the market asks for: technologies, roles,
 seniority and salaries, month by month.
 
 > Status: **phase 1 — ingestion into an immutable raw (bronze) layer.**
@@ -15,14 +15,16 @@ sources.
 
 ## Sources
 
-Only APIs intended for third parties are used. No LinkedIn, no HTML scraping of
-job boards. See [ADR 0001](docs/adr/0001-data-sources.md).
+Only APIs intended for third parties are used. LinkedIn and jobs.ch are
+excluded because their terms forbid automated collection. See
+[ADR 0001](docs/adr/0001-data-sources.md) and
+[ADR 0003](docs/adr/0003-geographic-scope-and-excluded-sources.md).
 
 | Source | What it adds | Auth |
 | --- | --- | --- |
 | HN "Ask HN: Who is hiring?" (Algolia API) | Monthly history back to 2011 | none |
 | Greenhouse, Lever and Ashby public job boards | Complete, first-hand postings from each employer | none |
-| Adzuna | Broad coverage of Switzerland | free key |
+| Adzuna | Broad coverage per country (ch, es, de, nl, ...) | free key |
 
 ## Architecture
 
@@ -49,13 +51,13 @@ jobpipe ingest hn
 # or only recent threads
 jobpipe ingest hn --since 2026-01-01
 
-# Suggest ATS boards of Swiss companies from the HN data, review, then add to config/boards.toml
-jobpipe discover-boards
+# Suggest ATS boards from the HN data (Switzerland, Spain, Europe), review, then add to config/boards.toml
+jobpipe discover-boards --region ch --region es --region eu
 jobpipe ingest ats
 
 # Adzuna (free key from developer.adzuna.com)
 export ADZUNA_APP_ID=... ADZUNA_APP_KEY=...
-jobpipe ingest adzuna --max-days-old 1
+jobpipe ingest adzuna --country ch --country es --country de --max-days-old 1
 ```
 
 Data lands in `data/bronze/source=<source>/ingest_date=<date>/run=<id>.jsonl`.
