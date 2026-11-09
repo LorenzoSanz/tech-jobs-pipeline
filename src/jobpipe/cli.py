@@ -20,6 +20,7 @@ from jobpipe.bronze import BronzeWriter, WriteResult, read_records
 from jobpipe.discovery import REGION_KEYWORDS, discover_from_hn, location_pattern
 from jobpipe.http import HttpClient, HttpError
 from jobpipe.sources import adzuna, ats, hn
+from jobpipe.verification import render_toml, verify
 
 DEFAULT_DATA_DIR = Path(os.environ.get("JOBPIPE_DATA_DIR", "data/bronze"))
 DEFAULT_BOARDS_FILE = Path("config/boards.toml")
@@ -106,6 +107,16 @@ def _discover_boards(args: argparse.Namespace) -> int:
     return 0
 
 
+def _verify_boards(args: argparse.Namespace, http: HttpClient) -> int:
+    candidates = tomllib.loads(args.boards.read_text(encoding="utf-8-sig"))
+    boards = {name: section.get("boards", []) for name, section in candidates.items()}
+    checks = verify(http, boards, location_pattern(args.region or ["ch"]))
+    print(render_toml(checks), end="")
+    kept = sum(check.keep for check in checks)
+    logging.info("kept %d of %d boards", kept, len(checks))
+    return 0 if kept else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="jobpipe", description=__doc__)
     parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR, help="bronze root directory")
@@ -153,6 +164,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     discover.set_defaults(handler=None)
 
+    verify_parser = commands.add_parser(
+        "verify-boards", help="keep only candidate boards that answer and hire in the region"
+    )
+    verify_parser.add_argument("--boards", type=Path, required=True, help="output of discover-boards")
+    verify_parser.add_argument(
+        "--region",
+        action="append",
+        choices=sorted(REGION_KEYWORDS),
+        help="repeatable: --region ch --region es --region eu (default: ch)",
+    )
+
     return parser
 
 
@@ -165,6 +187,8 @@ def main(argv: Sequence[str] | None = None, http: HttpClient | None = None) -> i
     )
     if args.command == "discover-boards":
         return _discover_boards(args)
+    if args.command == "verify-boards":
+        return _verify_boards(args, http or HttpClient())
     return args.handler(args, http or HttpClient(), BronzeWriter(args.data_dir))
 
 
