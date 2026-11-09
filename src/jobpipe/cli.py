@@ -92,7 +92,9 @@ def _ingest_adzuna(args: argparse.Namespace, http: HttpClient, writer: BronzeWri
 
 def _discover_boards(args: argparse.Namespace) -> int:
     regions = args.region or ["ch"]
-    counts = discover_from_hn(read_records(args.data_dir, hn.SOURCE), location_pattern(regions))
+    counts = discover_from_hn(
+        read_records(args.data_dir, hn.SOURCE), location_pattern(regions), since=args.since
+    )
     print(f"# Boards linked from HN postings that mention a location in: {', '.join(regions)}.")
     print("# Review each one before adding it to config/boards.toml. Number = postings.")
     for name, counter in counts.items():
@@ -140,6 +142,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     discover = commands.add_parser("discover-boards", help="suggest ATS boards from collected HN data")
     discover.add_argument("--min-count", type=int, default=1)
+    discover.add_argument(
+        "--since", type=date.fromisoformat, help="YYYY-MM-DD; ignore older HN postings"
+    )
     discover.add_argument(
         "--region",
         action="append",
