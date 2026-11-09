@@ -9,6 +9,7 @@ has been taken down. That is what makes first_seen/last_seen reliable later.
 from __future__ import annotations
 
 import logging
+import urllib.parse
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Iterable, Iterator
@@ -38,8 +39,13 @@ def _parse_iso(value: str | None) -> datetime | None:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
+def _path(board: str) -> str:
+    """Board names are user input; Ashby names may contain spaces ("Acme AI")."""
+    return urllib.parse.quote(board, safe="")
+
+
 def greenhouse_jobs(http: HttpClient, board: str) -> Iterator[RawItem]:
-    data = http.get_json(f"{GREENHOUSE_API}/{board}/jobs", {"content": "true"})
+    data = http.get_json(f"{GREENHOUSE_API}/{_path(board)}/jobs", {"content": "true"})
     for job in data.get("jobs", []):
         yield RawItem(
             source_id=f"{board}:{job['id']}",
@@ -52,7 +58,7 @@ def lever_jobs(http: HttpClient, board: str) -> Iterator[RawItem]:
     skip = 0
     while True:
         page = http.get_json(
-            f"{LEVER_API}/{board}", {"mode": "json", "skip": skip, "limit": LEVER_PAGE_SIZE}
+            f"{LEVER_API}/{_path(board)}", {"mode": "json", "skip": skip, "limit": LEVER_PAGE_SIZE}
         )
         for job in page:
             created = job.get("createdAt")
@@ -67,7 +73,7 @@ def lever_jobs(http: HttpClient, board: str) -> Iterator[RawItem]:
 
 
 def ashby_jobs(http: HttpClient, board: str) -> Iterator[RawItem]:
-    data = http.get_json(f"{ASHBY_API}/{board}", {"includeCompensation": "true"})
+    data = http.get_json(f"{ASHBY_API}/{_path(board)}", {"includeCompensation": "true"})
     for job in data.get("jobs", []):
         yield RawItem(
             source_id=f"{board}:{job['id']}",
