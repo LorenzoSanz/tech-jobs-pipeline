@@ -1,4 +1,4 @@
-"""Find public ATS boards of companies hiring in Switzerland.
+"""Find public ATS boards of companies hiring in a region (Switzerland, Spain, Europe).
 
 The ATS endpoints read one company at a time and there is no public list of
 boards. HN postings often link to the company's Greenhouse, Lever or Ashby
@@ -14,10 +14,25 @@ import urllib.parse
 from collections import Counter
 from typing import Iterable, Mapping
 
-DEFAULT_LOCATION_PATTERN = re.compile(
-    r"\b(switzerland|swiss|z[uü]rich|geneva|gen[eè]ve|lausanne|basel|bern|zug|lugano|winterthur)\b",
-    re.IGNORECASE,
-)
+REGION_KEYWORDS: dict[str, str] = {
+    "ch": r"switzerland|swiss|z[uü]rich|geneva|gen[eè]ve|lausanne|basel|bern|zug|lugano|winterthur",
+    "es": r"spain|espa[ñn]a|madrid|barcelona|valencia|sevilla|seville|m[aá]laga|bilbao|zaragoza",
+    "eu": (
+        r"europe|european union|emea|cet|berlin|munich|m[uü]nchen|hamburg|amsterdam|rotterdam"
+        r"|dublin|paris|lisbon|vienna|wien|stockholm|copenhagen|helsinki|oslo|warsaw|prague|london"
+    ),
+}
+
+
+def location_pattern(regions: Iterable[str]) -> re.Pattern[str]:
+    unknown = set(regions) - set(REGION_KEYWORDS)
+    if unknown:
+        raise ValueError(f"unknown regions: {sorted(unknown)}")
+    alternatives = "|".join(REGION_KEYWORDS[region] for region in regions)
+    return re.compile(rf"\b({alternatives})\b", re.IGNORECASE)
+
+
+DEFAULT_LOCATION_PATTERN = location_pattern(["ch"])
 
 # EU-hosted boards (job-boards.eu.greenhouse.io, jobs.eu.lever.co) use other API
 # hosts and are deliberately not matched until those hosts are supported.

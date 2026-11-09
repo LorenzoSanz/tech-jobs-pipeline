@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Sequence
 
 from jobpipe.bronze import BronzeWriter, WriteResult, read_records
-from jobpipe.discovery import discover_from_hn
+from jobpipe.discovery import REGION_KEYWORDS, discover_from_hn, location_pattern
 from jobpipe.http import HttpClient, HttpError
 from jobpipe.sources import adzuna, ats, hn
 
@@ -91,8 +91,9 @@ def _ingest_adzuna(args: argparse.Namespace, http: HttpClient, writer: BronzeWri
 
 
 def _discover_boards(args: argparse.Namespace) -> int:
-    counts = discover_from_hn(read_records(args.data_dir, hn.SOURCE))
-    print("# Boards linked from HN postings that mention a Swiss location.")
+    regions = args.region or ["ch"]
+    counts = discover_from_hn(read_records(args.data_dir, hn.SOURCE), location_pattern(regions))
+    print(f"# Boards linked from HN postings that mention a location in: {', '.join(regions)}.")
     print("# Review each one before adding it to config/boards.toml. Number = postings.")
     for name, counter in counts.items():
         print(f"\n[{name}]\nboards = [")
@@ -139,6 +140,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     discover = commands.add_parser("discover-boards", help="suggest ATS boards from collected HN data")
     discover.add_argument("--min-count", type=int, default=1)
+    discover.add_argument(
+        "--region",
+        action="append",
+        choices=sorted(REGION_KEYWORDS),
+        help="repeatable: --region ch --region es --region eu (default: ch)",
+    )
     discover.set_defaults(handler=None)
 
     return parser
