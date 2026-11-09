@@ -17,8 +17,8 @@ from pathlib import Path
 from typing import Sequence
 
 from jobpipe.bronze import BronzeWriter, WriteResult, read_records
-from jobpipe.discovery import discover_from_hn
-from jobpipe.http import HttpClient
+from jobpipe.discovery import REGION_KEYWORDS, discover_from_hn, location_pattern
+from jobpipe.http import HttpClient, HttpError
 from jobpipe.sources import adzuna, ats, hn
 
 DEFAULT_DATA_DIR = Path(os.environ.get("JOBPIPE_DATA_DIR", "data/bronze"))
@@ -69,22 +69,31 @@ def _ingest_adzuna(args: argparse.Namespace, http: HttpClient, writer: BronzeWri
     if not app_id or not app_key:
         logging.error("set ADZUNA_APP_ID and ADZUNA_APP_KEY (free key at developer.adzuna.com)")
         return 2
-    query = adzuna.AdzunaQuery(
-        country=args.country,
-        category=args.category or None,
-        what=args.what,
-        max_days_old=args.max_days_old,
-        max_pages=args.max_pages,
-    )
     credentials = adzuna.AdzunaCredentials(app_id, app_key)
-    result = writer.write("adzuna", adzuna.ingest(http, credentials, query))
-    print(_summary(result))
-    return 0
+    countries = args.country or ["ch"]
+    failed = 0
+    for country in countries:
+        query = adzuna.AdzunaQuery(
+            country=country,
+            category=args.category or None,
+            what=args.what,
+            max_days_old=args.max_days_old,
+            max_pages=args.max_pages,
+        )
+        try:
+            result = writer.write("adzuna", adzuna.ingest(http, credentials, query))
+        except HttpError as error:
+            logging.error("adzuna %s failed: %s", country, error)
+            failed += 1
+            continue
+        print(_summary(result, country=country))
+    return 1 if failed == len(countries) else 0
 
 
 def _discover_boards(args: argparse.Namespace) -> int:
-    counts = discover_from_hn(read_records(args.data_dir, hn.SOURCE))
-    print("# Boards linked from HN postings that mention a Swiss location.")
+    regions = args.region or ["ch"]
+    counts = discover_from_hn(read_records(args.data_dir, hn.SOURCE), location_pattern(regions))
+    print(f"# Boards linked from HN postings that mention a location in: {', '.join(regions)}.")
     print("# Review each one before adding it to config/boards.toml. Number = postings.")
     for name, counter in counts.items():
         print(f"\n[{name}]\nboards = [")
@@ -114,8 +123,16 @@ def build_parser() -> argparse.ArgumentParser:
     ats_parser.set_defaults(handler=_ingest_ats)
 
     adzuna_parser = sources.add_parser("adzuna", help="Adzuna search API (needs a free key)")
-    adzuna_parser.add_argument("--country", default="ch")
-    adzuna_parser.add_argument("--category", default="it-jobs", help="empty string for all categories")
+    adzuna_parser.add_argument(
+        "--country",
+        action="append",
+        help="ISO country code, repeatable: --country ch --country es (default: ch)",
+    )
+    adzuna_parser.add_argument(
+        "--category",
+        default="it-jobs",
+        help="Adzuna category tag (country-specific); empty string for all categories",
+    )
     adzuna_parser.add_argument("--what", help="keywords, e.g. 'kubernetes'")
     adzuna_parser.add_argument("--max-days-old", type=int)
     adzuna_parser.add_argument("--max-pages", type=int, default=20)
@@ -123,6 +140,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     discover = commands.add_parser("discover-boards", help="suggest ATS boards from collected HN data")
     discover.add_argument("--min-count", type=int, default=1)
+    discover.add_argument(
+        "--region",
+        action="append",
+        choices=sorted(REGION_KEYWORDS),
+        help="repeatable: --region ch --region es --region eu (default: ch)",
+    )
     discover.set_defaults(handler=None)
 
     return parser

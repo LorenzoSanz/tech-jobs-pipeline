@@ -1,6 +1,6 @@
 import unittest
 
-from jobpipe.discovery import discover_from_hn, extract_boards
+from jobpipe.discovery import discover_from_hn, extract_boards, location_pattern
 
 
 def hn_record(text: str) -> dict:
@@ -46,6 +46,21 @@ class DiscoverFromHnTest(unittest.TestCase):
 
         self.assertEqual(dict(counts["lever"]), {"acme": 2})
         self.assertEqual(dict(counts["greenhouse"]), {})
+
+    def test_regions_can_be_combined(self):
+        records = [
+            hn_record("Uno | Madrid, España | https://jobs.lever.co/uno"),
+            hn_record("Zwei | Berlin | https://jobs.lever.co/zwei"),
+            hn_record("Drei | Zurich | https://jobs.lever.co/drei"),
+        ]
+
+        counts = discover_from_hn(records, location_pattern(["es", "eu"]))
+
+        self.assertEqual(set(counts["lever"]), {"uno", "zwei"})
+
+    def test_rejects_unknown_regions(self):
+        with self.assertRaises(ValueError):
+            location_pattern(["mars"])
 
 
 if __name__ == "__main__":
