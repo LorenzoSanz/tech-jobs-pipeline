@@ -1,0 +1,18 @@
+# Public ATS job boards to snapshot on every run.
+#
+# Only add companies that hire in Switzerland or remotely in Europe.
+# Get suggestions from collected HN data with:
+#   python -m jobpipe discover-boards
+# and check each board in a browser before adding it:
+#   greenhouse -> https://boards-api.greenhouse.io/v1/boards/<token>/jobs
+#   lever      -> https://api.lever.co/v0/postings/<site>?mode=json
+#   ashby      -> https://api.ashbyhq.com/posting-api/job-board/<name>
+
+[greenhouse]
+boards = []
+
+[lever]
+boards = []
+
+[ashby]
+boards = []

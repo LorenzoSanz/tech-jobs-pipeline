@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Byte-compile
+        run: python -m compileall -q src tests
+      - name: Unit tests
+        run: python -m unittest discover -s tests -t . -v
+        env:
+          PYTHONPATH: src
+
+  commit-messages:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Conventional Commits
+        run: |
+          pattern='^(feat|fix|refactor|perf|test|docs|build|ci|infra|chore)(\([a-z0-9-]+\))?!?: .{1,72}$'
+          status=0
+          for sha in $(git rev-list "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"); do
+            subject=$(git log -1 --format=%s "$sha")
+            if ! echo "$subject" | grep -Eq "$pattern"; then
+              echo "::error::$sha does not follow Conventional Commits: $subject"
+              status=1
+            fi
+          done
+          exit $status
