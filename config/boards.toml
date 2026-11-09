@@ -8,11 +8,130 @@
 #   lever      -> https://api.lever.co/v0/postings/<site>?mode=json
 #   ashby      -> https://api.ashbyhq.com/posting-api/job-board/<name>
 
+# Verified on 2026-11-09 with verify-boards (regions ch, es, eu).
+# Comment = regional jobs / all open jobs at that time.
+
 [greenhouse]
-boards = []
+boards = [
+  "canonical",  # 187/316
+  "stripe",  # 142/767
+  "sumup",  # 141/343
+  "celonis",  # 134/230
+  "deliveroo",  # 124/200
+  "cloudflare",  # 120/465
+  "adyen",  # 106/251
+  "hellofresh",  # 99/380
+  "elastic",  # 89/425
+  "mongodb",  # 88/375
+  "wolt",  # 73/201
+  "datadog",  # 71/402
+  "grafanalabs",  # 62/132
+  "monzo",  # 56/58
+  "bitpanda",  # 42/42
+  "n26",  # 37/37
+  "okta",  # 31/376
+  "onrunning",  # 28/176
+  "mirakl",  # 24/25
+  "commercetools",  # 23/35
+  "tide",  # 23/81
+  "via",  # 23/177
+  "cabify",  # 21/51
+  "contentful",  # 19/29
+  "gocardless",  # 18/26
+  "gitlab",  # 13/250
+  "proton",  # 12/13
+  "xai",  # 12/304
+  "lightningai",  # 10/47
+  "coinbase",  # 6/283
+  "scandit",  # 6/9
+  "humansignal",  # 4/34
+  "planetscale",  # 4/12
+  "airtamejobs",  # 3/3
+  "tenableinc",  # 3/39
+  "materiom",  # 2/2
+  "twilio",  # 2/129
+  "typeform",  # 2/6
+]
 
 [lever]
-boards = []
+boards = [
+  "palantir",  # 51/305
+  "zopa",  # 28/32
+  "finn",  # 24/30
+  "jobandtalent",  # 15/38
+  "apolloresearch",  # 12/12
+  "vestiairecollective",  # 12/15
+  "swissborg",  # 10/10
+  "justwatch",  # 4/11
+  "rai",  # 4/5
+]
 
 [ashby]
-boards = []
+boards = [
+  "iceye",  # 86/194
+  "alan",  # 78/133
+  "lovable",  # 67/79
+  "proxima-fusion",  # 54/54
+  "clickhouse",  # 44/201
+  "elevenlabs",  # 44/136
+  "cohere",  # 41/124
+  "krakentech",  # 35/75
+  "amo",  # 33/34
+  "n8n",  # 30/49
+  "multiverse",  # 25/25
+  "synthesia",  # 24/32
+  "upvest",  # 24/24
+  "dust",  # 22/31
+  "axle-careers",  # 17/17
+  "antithesis",  # 16/21
+  "modal",  # 15/44
+  "prior-labs",  # 15/20
+  "snyk",  # 13/39
+  "fanvue.com",  # 11/11
+  "langdock",  # 11/11
+  "linear",  # 11/32
+  "writer",  # 11/48
+  "humaans",  # 10/12
+  "prelude",  # 10/12
+  "temporal",  # 10/81
+  "frontify",  # 9/16
+  "Kombo",  # 8/17
+  "Pear-VC",  # 8/107
+  "aptura",  # 8/35
+  "hiya",  # 7/27
+  "photoroom",  # 7/7
+  "1password",  # 6/78
+  "DeepL",  # 6/8
+  "black-forest-labs",  # 6/15
+  "prosper-ai",  # 6/13
+  "sentry",  # 6/39
+  "bliro",  # 5/5
+  "evervault",  # 5/6
+  "jupus",  # 5/7
+  "livekit",  # 5/30
+  "meticulous",  # 5/6
+  "smarkets",  # 5/6
+  "supabase",  # 5/70
+  "v7labs.com",  # 5/6
+  "Nango",  # 4/7
+  "coram-ai",  # 4/50
+  "deepsetai",  # 4/4
+  "dune",  # 4/4
+  "WunderGraph",  # 3/4
+  "cradlebio",  # 3/6
+  "fluidstack",  # 3/251
+  "konvu",  # 3/3
+  "paddle",  # 3/16
+  "runway-ml",  # 3/49
+  "stream",  # 3/7
+  "happyscribe.com",  # 2/2
+  "Diagrid",  # 1/6
+  "checkly",  # 1/2
+  "lightdash",  # 1/3
+  "mubit",  # 1/1
+  "posthog",  # 1/10
+  "river",  # 1/3
+  "speckle",  # 1/2
+  "triggerdev",  # 1/6
+  "upflow",  # 1/1
+]
