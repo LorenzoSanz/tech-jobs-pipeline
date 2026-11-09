@@ -63,6 +63,22 @@ class CliTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertEqual(out, "")
 
+    def test_ingest_adzuna_writes_one_run_per_country_and_survives_a_failing_one(self):
+        transport = FakeTransport()
+        transport.add(body={"results": [{"id": "1", "created": "2026-11-08T07:00:00Z"}]})
+        transport.add(status=400, body={"exception": "BAD_COUNTRY"})
+        env = {"ADZUNA_APP_ID": "id", "ADZUNA_APP_KEY": "key"}
+
+        with mock.patch.dict(os.environ, env, clear=True):
+            code, out = self.run_cli(
+                "ingest", "adzuna", "--country", "es", "--country", "xx", transport=transport
+            )
+
+        self.assertEqual(code, 0)
+        [summary] = [json.loads(line) for line in out.splitlines()]
+        self.assertEqual((summary["country"], summary["records"]), ("es", 1))
+        self.assertIn("/jobs/es/search/1", transport.urls()[0])
+
     def test_discover_boards_prints_a_reviewable_toml_snippet(self):
         BronzeWriter(self.data_dir).write(
             "hn",
