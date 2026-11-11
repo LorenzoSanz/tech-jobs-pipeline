@@ -1,0 +1,807 @@
+{
+  "uid": "jobpipe-feed",
+  "title": "For you",
+  "description": "Open postings that fit your profile, best match first, and what they ask for that you lack. Needs config/profile.toml; run jobpipe load after editing it.",
+  "tags": [
+    "jobpipe",
+    "en"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "graphTooltip": 1,
+  "liveNow": false,
+  "time": {
+    "from": "now-90d",
+    "to": "now"
+  },
+  "refresh": "",
+  "timepicker": {
+    "refresh_intervals": []
+  },
+  "templating": {
+    "list": [
+      {
+        "type": "custom",
+        "name": "region",
+        "label": "Region",
+        "description": "",
+        "multi": true,
+        "includeAll": false,
+        "query": "Switzerland : ch,Spain : es,Rest of Europe : eu,Other / unknown : other",
+        "options": [
+          {
+            "text": "Switzerland",
+            "value": "ch",
+            "selected": true
+          },
+          {
+            "text": "Spain",
+            "value": "es",
+            "selected": true
+          },
+          {
+            "text": "Rest of Europe",
+            "value": "eu",
+            "selected": true
+          },
+          {
+            "text": "Other / unknown",
+            "value": "other",
+            "selected": false
+          }
+        ],
+        "current": {
+          "text": [
+            "Switzerland",
+            "Spain",
+            "Rest of Europe"
+          ],
+          "value": [
+            "ch",
+            "es",
+            "eu"
+          ]
+        }
+      },
+      {
+        "type": "query",
+        "name": "role",
+        "label": "Role",
+        "description": "Role family, from the job title.",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "jobpipe-pg"
+        },
+        "query": "SELECT role AS __value, CASE role WHEN 'product' THEN 'Product & design' WHEN 'eng_management' THEN 'Engineering management' WHEN 'ml' THEN 'ML / AI' WHEN 'data' THEN 'Data' WHEN 'devops' THEN 'DevOps / SRE / Platform' WHEN 'security' THEN 'Security' WHEN 'mobile' THEN 'Mobile' WHEN 'qa' THEN 'QA / Testing' WHEN 'embedded' THEN 'Embedded / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Engineering (general)' WHEN 'other' THEN 'Other (non-tech)' ELSE role END AS __text FROM gold.feed GROUP BY role ORDER BY count(*) DESC",
+        "definition": "SELECT role AS __value, CASE role WHEN 'product' THEN 'Product & design' WHEN 'eng_management' THEN 'Engineering management' WHEN 'ml' THEN 'ML / AI' WHEN 'data' THEN 'Data' WHEN 'devops' THEN 'DevOps / SRE / Platform' WHEN 'security' THEN 'Security' WHEN 'mobile' THEN 'Mobile' WHEN 'qa' THEN 'QA / Testing' WHEN 'embedded' THEN 'Embedded / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Engineering (general)' WHEN 'other' THEN 'Other (non-tech)' ELSE role END AS __text FROM gold.feed GROUP BY role ORDER BY count(*) DESC",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "sort": 0,
+        "allValue": "'__all'",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "type": "custom",
+        "name": "min_match",
+        "label": "Match",
+        "description": "Share of the technologies a posting asks for that you know.",
+        "multi": false,
+        "includeAll": false,
+        "query": "Any : 0,50%+ : 50,70%+ : 70,90%+ : 90",
+        "options": [
+          {
+            "text": "Any",
+            "value": "0",
+            "selected": true
+          },
+          {
+            "text": "50%+",
+            "value": "50",
+            "selected": false
+          },
+          {
+            "text": "70%+",
+            "value": "70",
+            "selected": false
+          },
+          {
+            "text": "90%+",
+            "value": "90",
+            "selected": false
+          }
+        ],
+        "current": {
+          "text": "Any",
+          "value": "0"
+        }
+      },
+      {
+        "type": "custom",
+        "name": "new",
+        "label": "First seen",
+        "description": "",
+        "multi": false,
+        "includeAll": false,
+        "query": "Any time : 36500,Last 24 hours : 1,Last 7 days : 7,Last 30 days : 30",
+        "options": [
+          {
+            "text": "Any time",
+            "value": "36500",
+            "selected": true
+          },
+          {
+            "text": "Last 24 hours",
+            "value": "1",
+            "selected": false
+          },
+          {
+            "text": "Last 7 days",
+            "value": "7",
+            "selected": false
+          },
+          {
+            "text": "Last 30 days",
+            "value": "30",
+            "selected": false
+          }
+        ],
+        "current": {
+          "text": "Any time",
+          "value": "36500"
+        }
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "jobpipe",
+        "en"
+      ],
+      "asDropdown": true,
+      "title": "Other dashboards",
+      "includeVars": false,
+      "keepTime": true
+    },
+    {
+      "type": "link",
+      "title": "Español",
+      "url": "/d/jobpipe-feed-es",
+      "icon": "doc",
+      "tooltip": "Ver en español",
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": false,
+      "asDropdown": false,
+      "tags": []
+    }
+  ],
+  "panels": [
+    {
+      "type": "row",
+      "title": "Summary",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "id": 1
+    },
+    {
+      "type": "stat",
+      "title": "",
+      "description": "Needs config/profile.toml; run jobpipe load after editing it.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT count(*) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 30
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "displayName": "Open postings for you",
+          "unit": "locale",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3B82F6",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "id": 2
+    },
+    {
+      "type": "stat",
+      "title": "",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT count(*) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw} AND first_seen > now() - interval '7 days'"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 30
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "displayName": "New this week",
+          "unit": "locale",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5F73F6",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "id": 3
+    },
+    {
+      "type": "stat",
+      "title": "",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT count(*) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw} AND score >= 0.7"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 30
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "displayName": "Strong matches (70%+)",
+          "unit": "locale",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#8464F7",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "id": 4
+    },
+    {
+      "type": "stat",
+      "title": "",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT 100 * percentile_cont(0.5) WITHIN GROUP (ORDER BY score) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 30
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "displayName": "Median match",
+          "unit": "percent",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#A855F7",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "id": 5
+    },
+    {
+      "type": "row",
+      "title": "Postings for you · best match first",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 1
+      },
+      "id": 6
+    },
+    {
+      "type": "table",
+      "title": "Click the title to open the posting",
+      "description": "Postings that name no known technology have no match and come last. Ranking favours postings that name more of your skills.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT round(100 * score) AS \"Match\", title AS \"Title\",\n       company AS \"Company\", coalesce(location, country) AS \"Location\",\n       array_to_string(ARRAY(SELECT t.label FROM unnest(have) WITH ORDINALITY AS u(key, n) JOIN silver.technologies t USING (key) ORDER BY n), ', ') AS \"You know\", array_to_string(ARRAY(SELECT t.label FROM unnest(missing) WITH ORDINALITY AS u(key, n) JOIN silver.technologies t USING (key) ORDER BY n), ', ') AS \"You lack\",\n       to_char(first_seen, 'YYYY-MM-DD') AS \"First seen\", source AS \"Source\", url\nFROM gold.feed\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}\nORDER BY rank DESC, cardinality(have) DESC, first_seen DESC\nLIMIT 300"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "custom": {
+            "align": "auto",
+            "filterable": false,
+            "inspect": false,
+            "minWidth": 70
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Role|Rol"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Title"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open posting",
+                    "url": "${__data.fields.url}",
+                    "targetBlank": true
+                  }
+                ]
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 260
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "url"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Match"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "You know|You lack"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Match"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlPu"
+                }
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 150
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 24,
+        "h": 16
+      },
+      "id": 7
+    },
+    {
+      "type": "row",
+      "title": "What to learn",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 1
+      },
+      "id": 8
+    },
+    {
+      "type": "barchart",
+      "title": "What you lack most often · % of these postings",
+      "description": "Out of the postings above that name at least one technology.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT t.label AS \"Technology\",\n       round(100.0 * count(*) / nullif((SELECT count(*) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw} AND score IS NOT NULL), 0), 1)\n         AS \"Postings\"\nFROM gold.feed f\nCROSS JOIN LATERAL unnest(f.missing) AS u(key)\nJOIN silver.technologies t USING (key)\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}\nGROUP BY t.label ORDER BY 2 DESC, 1 LIMIT 15"
+        }
+      ],
+      "options": {
+        "xField": "Technology",
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "barWidth": 0.75,
+        "barRadius": 0.2,
+        "xTickLabelRotation": 0,
+        "tooltip": {
+          "mode": "single"
+        },
+        "stacking": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "color": {
+            "mode": "continuous-BlPu"
+          },
+          "custom": {
+            "fillOpacity": 90,
+            "lineWidth": 0,
+            "gradientMode": "scheme"
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 12,
+        "h": 11
+      },
+      "id": 9
+    },
+    {
+      "type": "barchart",
+      "title": "Most asked in these postings",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT t.label AS \"Technology\",\n       nullif(count(*) FILTER (WHERE u.key = ANY(f.have)), 0) AS \"You know\",\n       nullif(count(*) FILTER (WHERE u.key = ANY(f.missing)), 0) AS \"You lack\"\nFROM gold.feed f\nCROSS JOIN LATERAL unnest(f.have || f.missing) AS u(key)\nJOIN silver.technologies t USING (key)\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}\nGROUP BY t.label ORDER BY count(*) DESC, 1 LIMIT 15"
+        }
+      ],
+      "options": {
+        "xField": "Technology",
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "barWidth": 0.75,
+        "barRadius": 0.2,
+        "xTickLabelRotation": 0,
+        "tooltip": {
+          "mode": "multi"
+        },
+        "stacking": "normal"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "color": {
+            "mode": "continuous-BlPu"
+          },
+          "custom": {
+            "fillOpacity": 90,
+            "lineWidth": 0,
+            "gradientMode": "none"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "You know"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3B82F6"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "You lack"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A855F7"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 23,
+        "w": 12,
+        "h": 11
+      },
+      "id": 10
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 """Builds the dashboards in English and Spanish.
 
 Usage: python grafana/build_dashboards.py grafana/dashboards
-writes grafana/dashboards/{en,es}/{salaries,market,pipeline}.json.
+writes grafana/dashboards/{en,es}/{feed,salaries,market,pipeline}.json.
 
 Layout rules, so every dashboard looks the same:
 - every section starts with a row header and fills the 24 columns;
@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from jobpipe import roles  # noqa: E402
+from jobpipe import roles, tech  # noqa: E402
 
 OUT = Path(sys.argv[1])
 DS = {"type": "grafana-postgresql-datasource", "uid": "jobpipe-pg"}
@@ -122,30 +122,38 @@ def link_to_posting(text, field, url_field="url"):
     ]  # fmt: skip
 
 
-def barchart(title, sql, x, horizontal=False, description=""):
-    return panel(
+def barchart(title, sql, x, horizontal=False, description="", unit=None, colors=None):
+    """Bars shaded blue to purple by value; with `colors`, one fixed colour per series, stacked."""
+    p = panel(
         "barchart", title, sql, description=description,
         options={"xField": x, "orientation": "horizontal" if horizontal else "vertical", "showValue": "auto",
-                 "legend": {"showLegend": False}, "barWidth": 0.75, "barRadius": 0.2, "xTickLabelRotation": 0,
-                 "tooltip": {"mode": "single"}},
+                 "legend": {"showLegend": bool(colors), "displayMode": "list", "placement": "bottom"},
+                 "barWidth": 0.75, "barRadius": 0.2, "xTickLabelRotation": 0, "tooltip": {"mode": "multi" if colors else "single"},
+                 "stacking": "normal" if colors else "none"},
         defaults={"color": {"mode": "continuous-BlPu"}, "custom": {"fillOpacity": 90, "lineWidth": 0, "gradientMode": "scheme"}},
+        overrides=series_colors(colors or {}),
     )  # fmt: skip
+    if unit:
+        p["fieldConfig"]["defaults"]["unit"] = unit
+    if colors:
+        p["fieldConfig"]["defaults"]["custom"]["gradientMode"] = "none"
+    return p
 
 
-def timeseries(title, sql, description="", style="bars", colors=None, shades=None):
+def timeseries(title, sql, description="", style="bars", colors=None, shades=None, unit="locale"):
     custom = {"drawStyle": "bars", "fillOpacity": 85, "gradientMode": "none", "lineWidth": 0,
               "stacking": {"mode": "normal"}}  # fmt: skip
     if style == "points":
         custom = {"drawStyle": "points", "pointSize": 9}
     elif style == "line":
-        custom = {"drawStyle": "line", "lineWidth": 2, "lineInterpolation": "smooth", "fillOpacity": 18,
+        custom = {"drawStyle": "line", "lineWidth": 2, "lineInterpolation": "linear", "fillOpacity": 18,
                   "gradientMode": "opacity", "showPoints": "never"}  # fmt: skip
     color = {"mode": "shades", "fixedColor": shades} if shades else {"mode": "palette-classic"}
     return panel(
         "timeseries", title, sql, fmt="time_series", description=description,
         options={"legend": {"displayMode": "list", "placement": "bottom", "showLegend": True},
                  "tooltip": {"mode": "multi", "sort": "desc"}},
-        defaults={"custom": custom, "unit": "locale", "color": color},
+        defaults={"custom": custom, "unit": unit, "color": color},
         overrides=series_colors(colors or {}),
     )  # fmt: skip
 
@@ -193,13 +201,21 @@ def custom_var(name, label, values, default, multi=False, description=""):
             "current": {"text": cur_text if multi else cur_text[0], "value": default if multi else default[0]}}  # fmt: skip
 
 
-def query_var(name, label, sql, multi=False, all_option=False, description=""):
+def query_var(name, label, sql, multi=False, all_option=False, description="", default=None):
     v = {"type": "query", "name": name, "label": label, "description": description, "datasource": DS,
          "query": sql, "definition": sql, "refresh": 1, "multi": multi, "includeAll": all_option, "sort": 0}  # fmt: skip
     if all_option:
         v["allValue"] = "'__all'"
         v["current"] = {"text": ["All"], "value": ["$__all"]}
+    if default:  # {value: text}
+        v["current"] = {"text": list(default.values()), "value": list(default)}
     return v
+
+
+def labels_of(column):
+    """Technology keys in an array column, as their labels, in the array's order."""
+    return (f"array_to_string(ARRAY(SELECT t.label FROM unnest({column}) WITH ORDINALITY AS u(key, n) "
+            f"JOIN silver.technologies t USING (key) ORDER BY n), ', ')")  # fmt: skip
 
 
 # ----------------------------------------------------------------------------- dashboards
@@ -246,6 +262,98 @@ def build(lang):
             ],
             "panels": grid.done(),
         }  # fmt: skip
+
+    # ------------------------------------------------------------------------- feed
+
+    feed_where = f"""{REGION_SQL}
+  AND {any_of("role", "role")}
+  AND coalesce(score, 0) * 100 >= ${{min_match:raw}}
+  AND first_seen > now() - interval '1 day' * ${{new:raw}}"""
+    know, lack = t("You know", "Conoces"), t("You lack", "Te falta")
+    needs_profile = t("Needs config/profile.toml; run jobpipe load after editing it.",
+                      "Necesita config/profile.toml; ejecuta jobpipe load después de editarlo.")  # fmt: skip
+
+    feed = dashboard(
+        "feed", t("For you", "Para ti"),
+        description=t("Open postings that fit your profile, best match first, and what they ask for that you lack. ",
+                      "Ofertas abiertas que encajan con tu perfil, de mejor a peor, y lo que piden que te falta. ")
+        + needs_profile,
+        time_from="now-90d",
+        variables=[
+            region_var,
+            role_var("gold.feed"),
+            custom_var("min_match", t("Match", "Encaje"),
+                       [(t("Any", "Cualquiera"), "0"), ("50%+", "50"), ("70%+", "70"), ("90%+", "90")], ["0"],
+                       description=t("Share of the technologies a posting asks for that you know.",
+                                     "Porcentaje de las tecnologías que pide la oferta que conoces.")),
+            custom_var("new", t("First seen", "Vista por primera vez"),
+                       [(t("Any time", "Cuando sea"), "36500"), (t("Last 24 hours", "Últimas 24 horas"), "1"),
+                        (t("Last 7 days", "Últimos 7 días"), "7"), (t("Last 30 days", "Últimos 30 días"), "30")],
+                       ["36500"]),
+        ],
+        grid=Grid()
+        .section(t("Summary", "Resumen"))
+        .line(
+            KPI_H,
+            stat(t("Open postings for you", "Ofertas abiertas para ti"), f"SELECT count(*) FROM gold.feed WHERE {feed_where}",
+                 description=needs_profile),
+            stat(t("New this week", "Nuevas esta semana"),
+                 f"SELECT count(*) FROM gold.feed WHERE {feed_where} AND first_seen > now() - interval '7 days'"),
+            stat(t("Strong matches (70%+)", "Buen encaje (70 %+)"),
+                 f"SELECT count(*) FROM gold.feed WHERE {feed_where} AND score >= 0.7"),
+            stat(t("Median match", "Encaje mediano"),
+                 f"SELECT 100 * percentile_cont(0.5) WITHIN GROUP (ORDER BY score) FROM gold.feed WHERE {feed_where}",
+                 unit="percent"),
+        )  # fmt: skip
+        .section(t("Postings for you · best match first", "Ofertas para ti · de mejor a peor encaje"))
+        .line(
+            16,
+            table(t("Click the title to open the posting", "Clic en el puesto para abrir la oferta"),
+                  f"""
+SELECT round(100 * score) AS "{t("Match", "Encaje")}", title AS "{t("Title", "Puesto")}",
+       company AS "{t("Company", "Empresa")}", coalesce(location, country) AS "{t("Location", "Lugar")}",
+       {labels_of("have")} AS "{know}", {labels_of("missing")} AS "{lack}",
+       to_char(first_seen, 'YYYY-MM-DD') AS "{t("First seen", "Vista")}", source AS "{t("Source", "Fuente")}", url
+FROM gold.feed
+WHERE {feed_where}
+ORDER BY rank DESC, cardinality(have) DESC, first_seen DESC
+LIMIT 300
+""", overrides=link_to_posting(open_posting, t("Title", "Puesto"))
+                  + [by_name(t("Match", "Encaje"), ("unit", "percent"), ("min", 0), ("max", 100)),
+                     by_regex(f"{know}|{lack}", ("custom.minWidth", 200))],
+                  bars=t("Match", "Encaje"),
+                  description=t("Postings that name no known technology have no match and come last. Ranking favours postings that name more of your skills.",
+                                "Las ofertas que no nombran ninguna tecnología conocida no tienen encaje y salen al final. El orden favorece las que nombran más de tus tecnologías.")),
+        )  # fmt: skip
+        .section(t("What to learn", "Qué aprender"))
+        .line(
+            CHART_H + 2,
+            barchart(t("What you lack most often · % of these postings", "Lo que más te falta · % de estas ofertas"),
+                     f"""
+SELECT t.label AS "{t("Technology", "Tecnología")}",
+       round(100.0 * count(*) / nullif((SELECT count(*) FROM gold.feed WHERE {feed_where} AND score IS NOT NULL), 0), 1)
+         AS "{t("Postings", "Ofertas")}"
+FROM gold.feed f
+CROSS JOIN LATERAL unnest(f.missing) AS u(key)
+JOIN silver.technologies t USING (key)
+WHERE {feed_where}
+GROUP BY t.label ORDER BY 2 DESC, 1 LIMIT 15
+""", x=t("Technology", "Tecnología"), horizontal=True, unit="percent",
+                     description=t("Out of the postings above that name at least one technology.",
+                                   "Sobre las ofertas de arriba que nombran al menos una tecnología.")),
+            barchart(t("Most asked in these postings", "Lo más pedido en estas ofertas"),
+                     f"""
+SELECT t.label AS "{t("Technology", "Tecnología")}",
+       nullif(count(*) FILTER (WHERE u.key = ANY(f.have)), 0) AS "{know}",
+       nullif(count(*) FILTER (WHERE u.key = ANY(f.missing)), 0) AS "{lack}"
+FROM gold.feed f
+CROSS JOIN LATERAL unnest(f.have || f.missing) AS u(key)
+JOIN silver.technologies t USING (key)
+WHERE {feed_where}
+GROUP BY t.label ORDER BY count(*) DESC, 1 LIMIT 15
+""", x=t("Technology", "Tecnología"), horizontal=True, colors={know: BLUE, lack: PURPLE}),
+        ),  # fmt: skip
+    )
 
     # ------------------------------------------------------------------------- salaries
 
@@ -390,6 +498,9 @@ ORDER BY location, kind DESC, yoe_range
                       "SELECT company FROM silver.postings WHERE company IS NOT NULL GROUP BY 1 ORDER BY count(*) DESC, 1 LIMIT 500",
                       multi=True, all_option=True,
                       description=t("The 500 companies with the most postings.", "Las 500 empresas con más ofertas.")),
+            query_var("technology", t("Technologies (trend)", "Tecnologías (tendencia)"),
+                      "SELECT key AS __value, label AS __text FROM silver.technologies ORDER BY lower(label)",
+                      multi=True, default={k: tech.BY_KEY[k].label for k in ("python", "sql", "kafka", "dbt")}),
             custom_var("with_salary", t("Salary", "Salario"),
                        [(t("All postings", "Todas las ofertas"), "false"),
                         (t("Only with a stated salary", "Solo con salario publicado"), "true")], ["false"]),
@@ -439,6 +550,35 @@ FROM silver.postings
 WHERE last_seen > now() - interval '90 days' AND {posting_where}
 GROUP BY role ORDER BY 2 DESC
 """, x=t("Role", "Rol"), horizontal=True),
+        )  # fmt: skip
+        .section(t("Technologies", "Tecnologías"))
+        .line(
+            CHART_H + 2,
+            barchart(t("Most asked · % of postings in the period", "Lo más pedido · % de las ofertas del periodo"),
+                     f"""
+SELECT t.label AS "{t("Technology", "Tecnología")}",
+       round(100.0 * count(*) / nullif((SELECT count(*) FROM silver.postings
+                                         WHERE {posting_where} AND $__timeFilter(coalesce(published, first_seen))
+                                        ), 0), 1) AS "{t("Postings", "Ofertas")}"
+FROM silver.postings p
+CROSS JOIN LATERAL unnest(p.technologies) AS u(key)
+JOIN silver.technologies t USING (key)
+WHERE {posting_where} AND $__timeFilter(coalesce(p.published, p.first_seen))
+GROUP BY t.label ORDER BY 2 DESC, 1 LIMIT 20
+""", x=t("Technology", "Tecnología"), horizontal=True, unit="percent",
+                     description=t("From the title and description of each posting, see src/jobpipe/tech.py.",
+                                   "Sacado del título y la descripción de cada oferta, ver src/jobpipe/tech.py.")),
+            timeseries(t("Share of postings asking for each technology, per month", "Porcentaje de ofertas que pide cada tecnología, por mes"),
+                       f"""
+SELECT date_trunc('month', coalesce(p.published, p.first_seen)) AS time, t.label AS metric,
+       100.0 * count(*) FILTER (WHERE t.key = ANY(p.technologies)) / count(*) AS value
+FROM silver.postings p
+CROSS JOIN silver.technologies t
+WHERE t.key IN ($technology) AND {posting_where} AND $__timeFilter(coalesce(p.published, p.first_seen))
+GROUP BY 1, 2 HAVING count(*) >= 10 ORDER BY 1
+""", style="line", unit="percent", colors=dict(zip(["Python", "SQL", "Kafka", "dbt"], [BLUE, INDIGO, PURPLE, FUCHSIA])),
+                       description=t("Months with fewer than 10 postings are left out. HN goes back to 2011; the other sources only have what was open when collected.",
+                                     "Se omiten los meses con menos de 10 ofertas. HN llega hasta 2011; las demás fuentes solo tienen lo que estaba abierto al recogerlas.")),
         )  # fmt: skip
         .section(t("Postings", "Ofertas"))
         .line(
@@ -501,7 +641,7 @@ ORDER BY 1
 """, style="points", colors=dict(zip(SOURCES, ramp(len(SOURCES), SKY, FUCHSIA)))),
         ),  # fmt: skip
     )
-    return {"salaries": salaries, "market": market, "pipeline": pipeline}
+    return {"feed": feed, "salaries": salaries, "market": market, "pipeline": pipeline}
 
 
 for lang in LANGS:

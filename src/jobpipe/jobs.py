@@ -32,6 +32,7 @@ class Posting:
     fetched_at: str | None
     regions: tuple[str, ...]
     salaries: tuple[dict[str, Any], ...] = field(default_factory=tuple)
+    description: str = field(default="", repr=False)  # plain text, for technology extraction
 
     def text(self) -> str:
         return " ".join(filter(None, [self.title, self.company, self.location])).lower()
@@ -44,6 +45,7 @@ def _greenhouse(record: Mapping[str, Any]) -> dict[str, Any]:
         "company": job.get("company_name") or record["payload"].get("board"),
         "location": (job.get("location") or {}).get("name"),
         "url": job.get("absolute_url"),
+        "description": job.get("content"),
     }
 
 
@@ -55,6 +57,10 @@ def _lever(record: Mapping[str, Any]) -> dict[str, Any]:
         "location": (job.get("categories") or {}).get("location"),
         "country": job.get("country"),
         "url": job.get("hostedUrl"),
+        "description": " ".join(
+            [job.get("descriptionPlain") or "", job.get("additionalPlain") or ""]
+            + [f"{item.get('text', '')} {item.get('content', '')}" for item in job.get("lists") or []]
+        ),
     }
 
 
@@ -67,6 +73,7 @@ def _ashby(record: Mapping[str, Any]) -> dict[str, Any]:
         "location": job.get("location"),
         "country": address.get("addressCountry"),
         "url": job.get("jobUrl"),
+        "description": job.get("descriptionPlain"),
     }
 
 
@@ -78,6 +85,7 @@ def _adzuna(record: Mapping[str, Any]) -> dict[str, Any]:
         "location": (job.get("location") or {}).get("display_name"),
         "country": record["payload"].get("country"),
         "url": job.get("redirect_url"),
+        "description": job.get("description"),
     }
 
 
@@ -90,6 +98,7 @@ def _hn(record: Mapping[str, Any]) -> dict[str, Any]:
         "company": company[:80] if company else None,
         "location": header,
         "url": f"https://news.ycombinator.com/item?id={comment['id']}",
+        "description": comment["text"],
     }
 
 
@@ -152,6 +161,7 @@ def to_posting(source: str, record: Mapping[str, Any]) -> Posting | None:
         fetched_at=record.get("fetched_at"),
         regions=tuple(sorted(salary.regions_of(location, country))),
         salaries=tuple(_salary_view(s) for s in found),
+        description=salary.plain_text(fields.get("description") or ""),
     )
 
 

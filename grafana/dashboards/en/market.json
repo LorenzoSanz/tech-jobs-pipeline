@@ -116,6 +116,36 @@
         }
       },
       {
+        "type": "query",
+        "name": "technology",
+        "label": "Technologies (trend)",
+        "description": "",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "jobpipe-pg"
+        },
+        "query": "SELECT key AS __value, label AS __text FROM silver.technologies ORDER BY lower(label)",
+        "definition": "SELECT key AS __value, label AS __text FROM silver.technologies ORDER BY lower(label)",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": false,
+        "sort": 0,
+        "current": {
+          "text": [
+            "Python",
+            "SQL",
+            "Kafka",
+            "dbt"
+          ],
+          "value": [
+            "python",
+            "sql",
+            "kafka",
+            "dbt"
+          ]
+        }
+      },
+      {
         "type": "custom",
         "name": "with_salary",
         "label": "Salary",
@@ -711,14 +741,17 @@
         "orientation": "horizontal",
         "showValue": "auto",
         "legend": {
-          "showLegend": false
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
         },
         "barWidth": 0.75,
         "barRadius": 0.2,
         "xTickLabelRotation": 0,
         "tooltip": {
           "mode": "single"
-        }
+        },
+        "stacking": "none"
       },
       "fieldConfig": {
         "defaults": {
@@ -744,7 +777,7 @@
     },
     {
       "type": "row",
-      "title": "Postings",
+      "title": "Technologies",
       "collapsed": false,
       "panels": [],
       "gridPos": {
@@ -754,6 +787,199 @@
         "h": 1
       },
       "id": 11
+    },
+    {
+      "type": "barchart",
+      "title": "Most asked · % of postings in the period",
+      "description": "From the title and description of each posting, see src/jobpipe/tech.py.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT t.label AS \"Technology\",\n       round(100.0 * count(*) / nullif((SELECT count(*) FROM silver.postings\n                                         WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($company) OR company IN ($company)) AND $__timeFilter(coalesce(published, first_seen))\n                                        ), 0), 1) AS \"Postings\"\nFROM silver.postings p\nCROSS JOIN LATERAL unnest(p.technologies) AS u(key)\nJOIN silver.technologies t USING (key)\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($company) OR company IN ($company)) AND $__timeFilter(coalesce(p.published, p.first_seen))\nGROUP BY t.label ORDER BY 2 DESC, 1 LIMIT 20"
+        }
+      ],
+      "options": {
+        "xField": "Technology",
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "barWidth": 0.75,
+        "barRadius": 0.2,
+        "xTickLabelRotation": 0,
+        "tooltip": {
+          "mode": "single"
+        },
+        "stacking": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "color": {
+            "mode": "continuous-BlPu"
+          },
+          "custom": {
+            "fillOpacity": 90,
+            "lineWidth": 0,
+            "gradientMode": "scheme"
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 12,
+        "h": 11
+      },
+      "id": 12
+    },
+    {
+      "type": "timeseries",
+      "title": "Share of postings asking for each technology, per month",
+      "description": "Months with fewer than 10 postings are left out. HN goes back to 2011; the other sources only have what was open when collected.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('month', coalesce(p.published, p.first_seen)) AS time, t.label AS metric,\n       100.0 * count(*) FILTER (WHERE t.key = ANY(p.technologies)) / count(*) AS value\nFROM silver.postings p\nCROSS JOIN silver.technologies t\nWHERE t.key IN ($technology) AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($company) OR company IN ($company)) AND $__timeFilter(coalesce(p.published, p.first_seen))\nGROUP BY 1, 2 HAVING count(*) >= 10 ORDER BY 1"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "lineInterpolation": "linear",
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "showPoints": "never"
+          },
+          "unit": "percent",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Python"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3B82F6"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "SQL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6366F1"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Kafka"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A855F7"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "dbt"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#D946EF"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 26,
+        "w": 12,
+        "h": 11
+      },
+      "id": 13
+    },
+    {
+      "type": "row",
+      "title": "Postings",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 24,
+        "h": 1
+      },
+      "id": 14
     },
     {
       "type": "table",
@@ -844,11 +1070,11 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 26,
+        "y": 38,
         "w": 24,
         "h": 16
       },
-      "id": 12
+      "id": 15
     }
   ]
 }

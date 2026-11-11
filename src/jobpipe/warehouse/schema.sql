@@ -21,9 +21,31 @@ CREATE TABLE silver.postings (
     first_seen  timestamptz NOT NULL, -- first snapshot that contained it
     last_seen   timestamptz NOT NULL, -- latest snapshot that contained it
     snapshots   integer     NOT NULL,
+    is_open     boolean     NOT NULL, -- still published, see current_postings in jobpipe/warehouse
     regions     text[]      NOT NULL, -- ch, es, eu; empty when unknown
     role        text        NOT NULL, -- role family key from the title, see jobpipe/roles.py
+    technologies text[]     NOT NULL, -- technology keys from title and description, see jobpipe/tech.py
     PRIMARY KEY (source, source_id)
+);
+
+-- The technology catalogue, so dashboards can show labels and categories.
+CREATE TABLE silver.technologies (
+    key       text PRIMARY KEY,
+    label     text NOT NULL,
+    category  text NOT NULL
+);
+
+-- How each posting fits the profile in config/profile.toml. Empty without a profile.
+CREATE TABLE silver.posting_matches (
+    source      text    NOT NULL,
+    source_id   text    NOT NULL,
+    fits        boolean NOT NULL,  -- role, region and title pass the profile's filters
+    score       numeric,           -- share of the posting's technologies you know; NULL when it names none
+    rank        numeric NOT NULL,  -- sort key, see Match.rank in jobpipe/match.py
+    have        text[]  NOT NULL,
+    missing     text[]  NOT NULL,
+    PRIMARY KEY (source, source_id),
+    FOREIGN KEY (source, source_id) REFERENCES silver.postings
 );
 
 -- Salary ranges found in postings, annualised, never converted between currencies.
@@ -95,6 +117,7 @@ CREATE TABLE silver.load_log (
 );
 
 CREATE INDEX ON silver.postings USING gin (regions);
+CREATE INDEX ON silver.postings USING gin (technologies);
 CREATE INDEX ON silver.postings (coalesce(published, first_seen));
 
 -- Gold: views shaped for the dashboards. `region` is 'other' when unknown.
@@ -115,6 +138,23 @@ SELECT date_trunc('month', coalesce(published, first_seen))::date AS month,
        source, region, role, count(*) AS postings
 FROM gold.posting_regions
 GROUP BY 1, 2, 3, 4;
+
+-- Open postings that fit the profile: what the "For you" dashboard lists.
+CREATE VIEW gold.feed AS
+SELECT p.source, p.source_id, p.title, p.company, p.location, p.country, p.url, p.regions, p.role,
+       p.first_seen, coalesce(p.published, p.first_seen) AS posted_at,
+       m.score, m.rank, m.have, m.missing
+FROM silver.postings p
+JOIN silver.posting_matches m USING (source, source_id)
+WHERE p.is_open AND m.fits;
+
+-- One row per posting and technology it asks for.
+CREATE VIEW gold.posting_technologies AS
+SELECT p.source, p.source_id, p.role, p.regions, p.is_open,
+       coalesce(p.published, p.first_seen) AS posted_at, t.key AS technology, t.label, t.category
+FROM silver.postings p
+CROSS JOIN LATERAL unnest(p.technologies) AS u(key)
+JOIN silver.technologies t USING (key);
 
 CREATE VIEW gold.source_health AS
 SELECT source,

@@ -92,6 +92,19 @@ collected. Currencies are never mixed; Adzuna's estimated salaries are left out
 unless `--include-predicted` is given. Without a Levels.fyi key, check
 levels.fyi by hand.
 
+### Postings that fit you
+
+```bash
+cp config/profile.example.toml config/profile.toml   # list your skills, roles and regions
+jobpipe feed                     # open postings, best match first, with what each one asks that you lack
+jobpipe feed --days 7 --min-score 50
+```
+
+Each posting's technologies are found in its title and description
+(`src/jobpipe/tech.py`). The match is the share of them you know; the feed
+ends with the technologies you lack most often in the postings that fit you.
+See [ADR 0006](docs/adr/0006-technologies-and-matching.md).
+
 ### Dashboards
 
 Needs Docker.
@@ -99,17 +112,19 @@ Needs Docker.
 ```bash
 pip install -e .[db]
 docker compose up -d --build  # PostgreSQL (port 55432) + Grafana (3000), on 127.0.0.1 only
-jobpipe load                  # rebuild silver/gold from bronze (about a second)
+jobpipe load                  # rebuild silver/gold from bronze, scored with config/profile.toml
 ```
 
-Then open http://localhost:3000. Three dashboards, in English and Spanish
+Then open http://localhost:3000. Four dashboards, in English and Spanish
 (the button at the top switches language and keeps the filters):
 
+- **For you** (the home page): open postings that fit your profile, best
+  match first, and what to learn: the technologies they ask for that you lack.
 - **Salaries**: p25 / median / p75 / p90 by region, role and currency, where
   your offer falls, best-paying postings with links, Adzuna histograms,
   Levels.fyi.
-- **Market and postings**: postings per month and region, who is hiring, and
-  the list of postings.
+- **Market and postings**: postings per month and region, who is hiring, the
+  most asked technologies and their share per month, and the list of postings.
 - **Pipeline health**: runs and records per source, days since the last
   collection.
 
@@ -144,8 +159,9 @@ CI checks every PR. Decisions that are hard to reverse get an ADR in `docs/adr/`
 3. **Streaming** — collectors publish to Apache Kafka (Strimzi); bronze becomes a consumer.
 4. **Silver** — PostgreSQL with first_seen/last_seen per posting. *Started.*
    Next: deduplication across sources, location and seniority normalisation.
-5. **Gold** — salary dashboards in Grafana. *Started.* Next: technology
-   extraction and monthly demand, probably with dbt.
+5. **Gold** — salary, market and "for you" dashboards in Grafana, technology
+   extraction and matching. *Started.* Next: gold models in dbt, more Swiss
+   and Spanish sources.
 6. **Observability** — pipeline health dashboard. *Started.* Next: alerts when a
    source returns nothing.
 

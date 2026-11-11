@@ -42,7 +42,9 @@ FAMILIES: tuple[Family, ...] = (
     Family("security", "Security", "Seguridad", r"security|appsec|pentest|\bsoc\b"),
     Family("mobile", "Mobile", "Móvil", r"\bios\b|android|mobile|flutter|react native"),
     Family("qa", "QA / Testing", "QA / Test", r"\bqa\b|quality|\btest|sdet"),
-    Family("embedded", "Embedded / Hardware", "Embebido / Hardware", r"embedded|firmware|fpga|hardware|electronic"),
+    Family("embedded", "Embedded / Hardware", "Embebido / Hardware",
+           r"embedded|firmware|fpga|hardware|electronic|electrical|mechanical|industrial|manufacturing"
+           r"|civil|chemical|controls engineer|\bait\b"),
     Family("fullstack", "Full-stack", "Full-stack", r"full[ -]?stack"),
     Family("frontend", "Frontend", "Frontend", r"front[ -]?end|\bui engineer|react|angular|\bvue"),
     Family("backend", "Backend", "Backend",
