@@ -122,6 +122,30 @@ Each posting's technologies are found in its title and description
 ends with the technologies you lack most often in the postings that fit you.
 See [ADR 0006](docs/adr/0006-technologies-and-matching.md).
 
+### Your CV and LinkedIn against those postings
+
+```bash
+mkdir private   # gitignored: your CV and LinkedIn export never reach git
+jobpipe cv --cv private/cv.md --linkedin private/linkedin-export.zip
+jobpipe cv --cv private/cv-v1.docx --cv private/cv-v2.docx --tier faang --tier big_tech
+```
+
+Recruiters search LinkedIn by keyword and many application systems filter
+CVs the same way. The report lists the technologies the postings that fit you
+ask for most, which of them each document names, and how much of that demand
+it covers. Then it gives:
+
+- what to add: skills in your profile that a document never names;
+- what to learn: technologies the postings ask for and you lack;
+- skills a document names that your profile is missing;
+- the job titles the postings use most ("platform engineer", "ingeniero de
+  datos") and which documents say them.
+
+CVs are read as text, Markdown or .docx. LinkedIn comes from its data export
+(Settings, Data privacy, Get a copy of your data). Only the headline, about,
+skills and positions are read; the address, contacts and messages in the
+export are never opened (`src/jobpipe/cv.py`).
+
 ### Dashboards
 
 Needs Docker.

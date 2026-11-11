@@ -141,6 +141,16 @@ class CliTest(unittest.TestCase):
         self.assertEqual(feed["gaps"], [{"technology": "kafka", "postings": 1, "share": 0.5}])
         self.assertIn("lacks: Kafka", text)
 
+        resume = self.root / "cv.md"
+        resume.write_text("Data Engineer. Python and Kafka.", encoding="utf-8")
+        cv_code, cv_out = self.run_cli("cv", "--profile", str(profile), "--cv", str(resume), "--format", "json")
+        no_documents, _ = self.run_cli("cv", "--profile", str(profile))
+
+        report = json.loads(cv_out)
+        self.assertEqual((cv_code, no_documents, report["postings"]), (0, 2, 2))
+        self.assertEqual(report["documents"][0]["to_add"], ["sql", "airflow"])
+        self.assertEqual(report["documents"][0]["titles"], ["data engineer"])
+
     def test_ingest_adzuna_salaries_one_run_per_search(self):
         transport = FakeTransport()
         transport.add(body={"histogram": {"90000": "3"}})

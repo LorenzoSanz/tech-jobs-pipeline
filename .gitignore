@@ -18,3 +18,6 @@ dist/
 
 # Personal job-search profile
 config/profile.toml
+
+# Your CV and LinkedIn export, for `jobpipe cv`
+private/

@@ -14,16 +14,20 @@ import os
 import re
 import sys
 import tomllib
+import zipfile
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
 
 from jobpipe.bronze import BronzeWriter, WriteResult, read_records
 from jobpipe.discovery import REGION_KEYWORDS, discover_from_hn, location_pattern
 from jobpipe.http import HttpClient, HttpError
-from jobpipe import employers, match, salary, tech
+from jobpipe import cv, employers, match, salary, tech
 from jobpipe.sources import adzuna, ats, hn, levelsfyi
 from jobpipe.verification import render_toml, verify
+
+if TYPE_CHECKING:
+    from jobpipe.warehouse import Current
 
 DEFAULT_DATA_DIR = Path(os.environ.get("JOBPIPE_DATA_DIR", "data/bronze"))
 DEFAULT_BOARDS_FILE = Path("config/boards.toml")
@@ -194,9 +198,22 @@ def _profile(path: Path, required: bool) -> match.Profile | None:
     return match.load_profile(path)
 
 
-def _feed(args: argparse.Namespace) -> int:
+def _fitting(data_dir: Path, profile: match.Profile) -> list[tuple[Current, match.Match, employers.Employer]]:
+    """Open jobs (one posting each) that fit the profile."""
     from jobpipe import warehouse
 
+    rows = []
+    for current in warehouse.current_postings(data_dir):
+        posting = current.posting
+        employer = employers.employer_of(posting.company)
+        m = match.match(profile, posting.title, current.role, posting.regions, current.technologies,
+                        current.seniority, employer.tier)  # fmt: skip
+        if current.is_open and current.job_rank == 0 and m.fits:
+            rows.append((current, m, employer))
+    return rows
+
+
+def _feed(args: argparse.Namespace) -> int:
     try:
         profile = _profile(args.profile, required=True)
     except match.ProfileError as error:
@@ -207,14 +224,7 @@ def _feed(args: argparse.Namespace) -> int:
     if args.tier:
         profile = dataclasses.replace(profile, company_tiers=frozenset(args.tier))
     since = (datetime.now(timezone.utc) - timedelta(days=args.days)).isoformat() if args.days else ""
-    rows = []
-    for current in warehouse.current_postings(args.data_dir):
-        posting = current.posting
-        employer = employers.employer_of(posting.company)
-        m = match.match(profile, posting.title, current.role, posting.regions, current.technologies,
-                        current.seniority, employer.tier)  # fmt: skip
-        if current.is_open and current.job_rank == 0 and m.fits:
-            rows.append((current, m, employer))
+    rows = _fitting(args.data_dir, profile)
     gaps = match.gaps(m for _, m, _ in rows)
     shown = [
         (c, m, e) for c, m, e in rows
@@ -253,6 +263,38 @@ def _feed(args: argparse.Namespace) -> int:
         print("\nWhat you lack most often in these postings:")
         for key, n, share in gaps[:10]:
             print(f"  {label[key]:<16} {share:4.0%}  ({n})")
+    return 0
+
+
+def _cv(args: argparse.Namespace) -> int:
+    try:
+        profile = _profile(args.profile, required=True)
+    except match.ProfileError as error:
+        logging.error("%s", error)
+        return 2
+    if profile is None:
+        return 2
+    if not args.cv and not args.linkedin:
+        logging.error("give --cv, --linkedin or both (keep them in private/, which git ignores)")
+        return 2
+    if args.tier:
+        profile = dataclasses.replace(profile, company_tiers=frozenset(args.tier))
+    documents: dict[str, str] = {}
+    try:
+        for path in args.cv or []:
+            documents[path.stem if len(args.cv) > 1 else "CV"] = cv.read_document(path)
+        if args.linkedin:
+            documents["LinkedIn"] = "\n".join(cv.read_linkedin(args.linkedin).values())
+    except (OSError, ValueError, KeyError, zipfile.BadZipFile) as error:
+        logging.error("%s", error)
+        return 2
+    rows = _fitting(args.data_dir, profile)
+    wanted = cv.demand((c.posting.title, c.technologies) for c, _, _ in rows)
+    found = cv.reviews(documents, profile.skills, wanted)
+    if args.format == "json":
+        print(json.dumps(cv.to_jsonable(wanted, found), indent=2, ensure_ascii=False))
+    else:
+        sys.stdout.write(cv.render_text(wanted, found, profile.skills, top=args.top))
     return 0
 
 
@@ -414,6 +456,18 @@ def build_parser() -> argparse.ArgumentParser:
     feed.add_argument("--limit", type=int, default=25)
     feed.add_argument("--format", choices=["text", "json"], default="text")
 
+    cv_parser = commands.add_parser(
+        "cv", help="which technologies and titles the postings that fit you ask for, and your CV or LinkedIn lacks"
+    )
+    cv_parser.add_argument("--cv", type=Path, action="append",
+                           help="CV as .txt, .md or .docx, repeatable to compare versions (keep it in private/)")  # fmt: skip
+    cv_parser.add_argument("--linkedin", type=Path, help="LinkedIn data export, the .zip or its folder")
+    cv_parser.add_argument("--profile", type=Path, default=DEFAULT_PROFILE, help=f"default: {DEFAULT_PROFILE}")
+    cv_parser.add_argument("--tier", action="append", choices=[t.key for t in employers.TIERS],
+                           help="only postings from these company tiers, e.g. --tier faang")  # fmt: skip
+    cv_parser.add_argument("--top", type=int, default=15, help="technologies to list")
+    cv_parser.add_argument("--format", choices=["text", "json"], default="text")
+
     return parser
 
 
@@ -464,6 +518,8 @@ def main(argv: Sequence[str] | None = None, http: HttpClient | None = None) -> i
         return _load(args)
     if args.command == "feed":
         return _feed(args)
+    if args.command == "cv":
+        return _cv(args)
     return args.handler(args, http or HttpClient(), BronzeWriter(args.data_dir))
 
 
