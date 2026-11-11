@@ -39,6 +39,19 @@ incremental loads keyed on `run_id`.
 | A custom web UI | More code to maintain; Grafana already does filters, charts and links. |
 | dbt for the transformations | Likely next step for the gold layer; the parsing (salary ranges in free text) stays in Python either way. |
 
+### Languages and look (added 2026-11-11)
+
+- Each dashboard is generated in English and Spanish from one definition, so
+  the two cannot drift apart. The warehouse stores language-neutral keys
+  (role `data`, region `ch`) and the dashboards turn them into labels, which
+  is why switching language keeps the filters.
+- Grafana has no setting for custom styles. Rather than turning off HTML
+  sanitising to inject CSS from a text panel, the Grafana image is extended
+  with one stylesheet linked from `index.html`. The CSS only targets
+  `data-testid` attributes, and the image version is pinned; the rules need a
+  check whenever it is bumped. Grafana's own UI (time picker, menus) stays in
+  English.
+
 ## Consequences
 
 - `first_seen`, `last_seen` and `snapshots` now exist per posting, the start

@@ -1,0 +1,1471 @@
+{
+  "uid": "jobpipe-salaries",
+  "title": "Salaries",
+  "description": "Salary ranges stated in postings. Gross per year, never converted between currencies.",
+  "tags": [
+    "jobpipe",
+    "en"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "graphTooltip": 1,
+  "liveNow": false,
+  "time": {
+    "from": "now-1y",
+    "to": "now"
+  },
+  "refresh": "",
+  "timepicker": {
+    "refresh_intervals": []
+  },
+  "templating": {
+    "list": [
+      {
+        "type": "custom",
+        "name": "region",
+        "label": "Region",
+        "description": "",
+        "multi": true,
+        "includeAll": false,
+        "query": "Switzerland : ch,Spain : es,Rest of Europe : eu,Other / unknown : other",
+        "options": [
+          {
+            "text": "Switzerland",
+            "value": "ch",
+            "selected": true
+          },
+          {
+            "text": "Spain",
+            "value": "es",
+            "selected": true
+          },
+          {
+            "text": "Rest of Europe",
+            "value": "eu",
+            "selected": true
+          },
+          {
+            "text": "Other / unknown",
+            "value": "other",
+            "selected": false
+          }
+        ],
+        "current": {
+          "text": [
+            "Switzerland",
+            "Spain",
+            "Rest of Europe"
+          ],
+          "value": [
+            "ch",
+            "es",
+            "eu"
+          ]
+        }
+      },
+      {
+        "type": "query",
+        "name": "role",
+        "label": "Role",
+        "description": "Role family, from the job title.",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "jobpipe-pg"
+        },
+        "query": "SELECT role AS __value, CASE role WHEN 'product' THEN 'Product & design' WHEN 'eng_management' THEN 'Engineering management' WHEN 'ml' THEN 'ML / AI' WHEN 'data' THEN 'Data' WHEN 'devops' THEN 'DevOps / SRE / Platform' WHEN 'security' THEN 'Security' WHEN 'mobile' THEN 'Mobile' WHEN 'qa' THEN 'QA / Testing' WHEN 'embedded' THEN 'Embedded / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Engineering (general)' WHEN 'other' THEN 'Other (non-tech)' ELSE role END AS __text FROM gold.salaries GROUP BY role ORDER BY count(*) DESC",
+        "definition": "SELECT role AS __value, CASE role WHEN 'product' THEN 'Product & design' WHEN 'eng_management' THEN 'Engineering management' WHEN 'ml' THEN 'ML / AI' WHEN 'data' THEN 'Data' WHEN 'devops' THEN 'DevOps / SRE / Platform' WHEN 'security' THEN 'Security' WHEN 'mobile' THEN 'Mobile' WHEN 'qa' THEN 'QA / Testing' WHEN 'embedded' THEN 'Embedded / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Engineering (general)' WHEN 'other' THEN 'Other (non-tech)' ELSE role END AS __text FROM gold.salaries GROUP BY role ORDER BY count(*) DESC",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "sort": 0,
+        "allValue": "'__all'",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "type": "query",
+        "name": "currency",
+        "label": "Currency",
+        "description": "Amounts are never converted between currencies.",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "jobpipe-pg"
+        },
+        "query": "SELECT currency FROM silver.posted_salaries GROUP BY 1 ORDER BY array_position(ARRAY['CHF', 'EUR'], currency) NULLS LAST, count(*) DESC",
+        "definition": "SELECT currency FROM silver.posted_salaries GROUP BY 1 ORDER BY array_position(ARRAY['CHF', 'EUR'], currency) NULLS LAST, count(*) DESC",
+        "refresh": 1,
+        "multi": false,
+        "includeAll": false,
+        "sort": 0
+      },
+      {
+        "type": "custom",
+        "name": "offer",
+        "label": "Your offer (gross / year)",
+        "description": "Compare a figure with the postings in the chosen currency.",
+        "multi": false,
+        "includeAll": false,
+        "query": "20k : 20000,25k : 25000,30k : 30000,35k : 35000,40k : 40000,45k : 45000,50k : 50000,55k : 55000,60k : 60000,65k : 65000,70k : 70000,75k : 75000,80k : 80000,85k : 85000,90k : 90000,95k : 95000,100k : 100000,105k : 105000,110k : 110000,115k : 115000,120k : 120000,125k : 125000,130k : 130000,135k : 135000,140k : 140000,145k : 145000,150k : 150000,155k : 155000,160k : 160000,165k : 165000,170k : 170000,175k : 175000,180k : 180000,185k : 185000,190k : 190000,195k : 195000,200k : 200000,205k : 205000,210k : 210000,215k : 215000,220k : 220000,225k : 225000,230k : 230000,235k : 235000,240k : 240000,245k : 245000,250k : 250000,255k : 255000,260k : 260000,265k : 265000,270k : 270000,275k : 275000,280k : 280000,285k : 285000,290k : 290000,295k : 295000,300k : 300000",
+        "options": [
+          {
+            "text": "20k",
+            "value": "20000",
+            "selected": false
+          },
+          {
+            "text": "25k",
+            "value": "25000",
+            "selected": false
+          },
+          {
+            "text": "30k",
+            "value": "30000",
+            "selected": false
+          },
+          {
+            "text": "35k",
+            "value": "35000",
+            "selected": false
+          },
+          {
+            "text": "40k",
+            "value": "40000",
+            "selected": false
+          },
+          {
+            "text": "45k",
+            "value": "45000",
+            "selected": false
+          },
+          {
+            "text": "50k",
+            "value": "50000",
+            "selected": false
+          },
+          {
+            "text": "55k",
+            "value": "55000",
+            "selected": false
+          },
+          {
+            "text": "60k",
+            "value": "60000",
+            "selected": false
+          },
+          {
+            "text": "65k",
+            "value": "65000",
+            "selected": false
+          },
+          {
+            "text": "70k",
+            "value": "70000",
+            "selected": false
+          },
+          {
+            "text": "75k",
+            "value": "75000",
+            "selected": false
+          },
+          {
+            "text": "80k",
+            "value": "80000",
+            "selected": false
+          },
+          {
+            "text": "85k",
+            "value": "85000",
+            "selected": false
+          },
+          {
+            "text": "90k",
+            "value": "90000",
+            "selected": false
+          },
+          {
+            "text": "95k",
+            "value": "95000",
+            "selected": false
+          },
+          {
+            "text": "100k",
+            "value": "100000",
+            "selected": true
+          },
+          {
+            "text": "105k",
+            "value": "105000",
+            "selected": false
+          },
+          {
+            "text": "110k",
+            "value": "110000",
+            "selected": false
+          },
+          {
+            "text": "115k",
+            "value": "115000",
+            "selected": false
+          },
+          {
+            "text": "120k",
+            "value": "120000",
+            "selected": false
+          },
+          {
+            "text": "125k",
+            "value": "125000",
+            "selected": false
+          },
+          {
+            "text": "130k",
+            "value": "130000",
+            "selected": false
+          },
+          {
+            "text": "135k",
+            "value": "135000",
+            "selected": false
+          },
+          {
+            "text": "140k",
+            "value": "140000",
+            "selected": false
+          },
+          {
+            "text": "145k",
+            "value": "145000",
+            "selected": false
+          },
+          {
+            "text": "150k",
+            "value": "150000",
+            "selected": false
+          },
+          {
+            "text": "155k",
+            "value": "155000",
+            "selected": false
+          },
+          {
+            "text": "160k",
+            "value": "160000",
+            "selected": false
+          },
+          {
+            "text": "165k",
+            "value": "165000",
+            "selected": false
+          },
+          {
+            "text": "170k",
+            "value": "170000",
+            "selected": false
+          },
+          {
+            "text": "175k",
+            "value": "175000",
+            "selected": false
+          },
+          {
+            "text": "180k",
+            "value": "180000",
+            "selected": false
+          },
+          {
+            "text": "185k",
+            "value": "185000",
+            "selected": false
+          },
+          {
+            "text": "190k",
+            "value": "190000",
+            "selected": false
+          },
+          {
+            "text": "195k",
+            "value": "195000",
+            "selected": false
+          },
+          {
+            "text": "200k",
+            "value": "200000",
+            "selected": false
+          },
+          {
+            "text": "205k",
+            "value": "205000",
+            "selected": false
+          },
+          {
+            "text": "210k",
+            "value": "210000",
+            "selected": false
+          },
+          {
+            "text": "215k",
+            "value": "215000",
+            "selected": false
+          },
+          {
+            "text": "220k",
+            "value": "220000",
+            "selected": false
+          },
+          {
+            "text": "225k",
+            "value": "225000",
+            "selected": false
+          },
+          {
+            "text": "230k",
+            "value": "230000",
+            "selected": false
+          },
+          {
+            "text": "235k",
+            "value": "235000",
+            "selected": false
+          },
+          {
+            "text": "240k",
+            "value": "240000",
+            "selected": false
+          },
+          {
+            "text": "245k",
+            "value": "245000",
+            "selected": false
+          },
+          {
+            "text": "250k",
+            "value": "250000",
+            "selected": false
+          },
+          {
+            "text": "255k",
+            "value": "255000",
+            "selected": false
+          },
+          {
+            "text": "260k",
+            "value": "260000",
+            "selected": false
+          },
+          {
+            "text": "265k",
+            "value": "265000",
+            "selected": false
+          },
+          {
+            "text": "270k",
+            "value": "270000",
+            "selected": false
+          },
+          {
+            "text": "275k",
+            "value": "275000",
+            "selected": false
+          },
+          {
+            "text": "280k",
+            "value": "280000",
+            "selected": false
+          },
+          {
+            "text": "285k",
+            "value": "285000",
+            "selected": false
+          },
+          {
+            "text": "290k",
+            "value": "290000",
+            "selected": false
+          },
+          {
+            "text": "295k",
+            "value": "295000",
+            "selected": false
+          },
+          {
+            "text": "300k",
+            "value": "300000",
+            "selected": false
+          }
+        ],
+        "current": {
+          "text": "100k",
+          "value": "100000"
+        }
+      },
+      {
+        "type": "custom",
+        "name": "predicted",
+        "label": "Adzuna estimates",
+        "description": "Adzuna estimates a salary for postings that do not state one. Better left out when negotiating.",
+        "multi": false,
+        "includeAll": false,
+        "query": "Exclude : false,Include : true",
+        "options": [
+          {
+            "text": "Exclude",
+            "value": "false",
+            "selected": true
+          },
+          {
+            "text": "Include",
+            "value": "true",
+            "selected": false
+          }
+        ],
+        "current": {
+          "text": "Exclude",
+          "value": "false"
+        }
+      },
+      {
+        "type": "query",
+        "name": "adzuna",
+        "label": "Adzuna search",
+        "description": "",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "jobpipe-pg"
+        },
+        "query": "SELECT DISTINCT country || ' | ' || coalesce(what, category, 'todo') FROM silver.adzuna_salary_histogram ORDER BY 1",
+        "definition": "SELECT DISTINCT country || ' | ' || coalesce(what, category, 'todo') FROM silver.adzuna_salary_histogram ORDER BY 1",
+        "refresh": 1,
+        "multi": false,
+        "includeAll": false,
+        "sort": 0
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "jobpipe",
+        "en"
+      ],
+      "asDropdown": true,
+      "title": "Other dashboards",
+      "includeVars": false,
+      "keepTime": true
+    },
+    {
+      "type": "link",
+      "title": "Español",
+      "url": "/d/jobpipe-salaries-es",
+      "icon": "doc",
+      "tooltip": "Ver en español",
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": false,
+      "asDropdown": false,
+      "tags": []
+    }
+  ],
+  "panels": [
+    {
+      "type": "row",
+      "title": "Summary · $currency, midpoint of the range",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "id": 1
+    },
+    {
+      "type": "stat",
+      "title": "",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT count(*) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 30
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "displayName": "Postings with salary",
+          "unit": "locale",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3B82F6",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "id": 2
+    },
+    {
+      "type": "stat",
+      "title": "",
+      "description": "One posting in four pays less than this.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT percentile_cont(0.25) WITHIN GROUP (ORDER BY midpoint) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 30
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "displayName": "p25",
+          "unit": "locale",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5179F6",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 4,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "id": 3
+    },
+    {
+      "type": "stat",
+      "title": "",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY midpoint) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 30
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "displayName": "Median",
+          "unit": "locale",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6770F6",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "id": 4
+    },
+    {
+      "type": "stat",
+      "title": "",
+      "description": "One posting in four pays more than this.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT percentile_cont(0.75) WITHIN GROUP (ORDER BY midpoint) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 30
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "displayName": "p75",
+          "unit": "locale",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#7C67F7",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "id": 5
+    },
+    {
+      "type": "stat",
+      "title": "",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT percentile_cont(0.9) WITHIN GROUP (ORDER BY midpoint) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 30
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "displayName": "p90",
+          "unit": "locale",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#925EF7",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "id": 6
+    },
+    {
+      "type": "stat",
+      "title": "",
+      "description": "Share of postings whose midpoint is at or below your offer.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT 100.0 * avg((midpoint <= ${offer:sqlstring}::numeric)::int) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 30
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "displayName": "Your offer beats",
+          "unit": "percent",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#D946EF",
+                "value": null
+              },
+              {
+                "color": "#A855F7",
+                "value": 25
+              },
+              {
+                "color": "#6366F1",
+                "value": 50
+              },
+              {
+                "color": "#3B82F6",
+                "value": 75
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "id": 7
+    },
+    {
+      "type": "row",
+      "title": "Distribution",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 1
+      },
+      "id": 8
+    },
+    {
+      "type": "histogram",
+      "title": "Midpoint of the range",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT midpoint AS \"Midpoint\" FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
+        }
+      ],
+      "options": {
+        "bucketCount": 20,
+        "combine": false,
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "unit": "locale",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6366F1"
+          },
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 0,
+            "gradientMode": "opacity"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 9
+      },
+      "id": 9
+    },
+    {
+      "type": "table",
+      "title": "By role",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT CASE role WHEN 'product' THEN 'Product & design' WHEN 'eng_management' THEN 'Engineering management' WHEN 'ml' THEN 'ML / AI' WHEN 'data' THEN 'Data' WHEN 'devops' THEN 'DevOps / SRE / Platform' WHEN 'security' THEN 'Security' WHEN 'mobile' THEN 'Mobile' WHEN 'qa' THEN 'QA / Testing' WHEN 'embedded' THEN 'Embedded / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Engineering (general)' WHEN 'other' THEN 'Other (non-tech)' ELSE role END AS \"Role\", count(*) AS \"Postings\",\n       percentile_cont(0.25) WITHIN GROUP (ORDER BY midpoint) AS \"p25\",\n       percentile_cont(0.5)  WITHIN GROUP (ORDER BY midpoint) AS \"Median\",\n       percentile_cont(0.75) WITHIN GROUP (ORDER BY midpoint) AS \"p75\"\nFROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)\n\nGROUP BY role ORDER BY 4 DESC"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "custom": {
+            "align": "auto",
+            "filterable": false,
+            "inspect": false,
+            "minWidth": 70
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Role|Rol"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "p25|Median|p75"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Median"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlPu"
+                }
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 150
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 6,
+        "w": 12,
+        "h": 9
+      },
+      "id": 10
+    },
+    {
+      "type": "row",
+      "title": "Best-paying postings",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 24,
+        "h": 1
+      },
+      "id": 11
+    },
+    {
+      "type": "table",
+      "title": "Highest ranges · click the title to open the posting",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT company AS \"Company\", title AS \"Title\", CASE role WHEN 'product' THEN 'Product & design' WHEN 'eng_management' THEN 'Engineering management' WHEN 'ml' THEN 'ML / AI' WHEN 'data' THEN 'Data' WHEN 'devops' THEN 'DevOps / SRE / Platform' WHEN 'security' THEN 'Security' WHEN 'mobile' THEN 'Mobile' WHEN 'qa' THEN 'QA / Testing' WHEN 'embedded' THEN 'Embedded / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Engineering (general)' WHEN 'other' THEN 'Other (non-tech)' ELSE role END AS \"Role\",\n       coalesce(location, country) AS \"Location\",\n       min_annual AS \"Min\", max_annual AS \"Max\",\n       to_char(posted_at, 'YYYY-MM-DD') AS \"Posted\", source AS \"Source\", url\nFROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)\n\nORDER BY max_annual DESC LIMIT 100"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "custom": {
+            "align": "auto",
+            "filterable": false,
+            "inspect": false,
+            "minWidth": 70
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Role|Rol"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Title"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open posting",
+                    "url": "${__data.fields.url}",
+                    "targetBlank": true
+                  }
+                ]
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 260
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "url"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Min|Max"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Max"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlPu"
+                }
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 150
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 24,
+        "h": 13
+      },
+      "id": 12
+    },
+    {
+      "type": "row",
+      "title": "External benchmarks",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 1
+      },
+      "id": 13
+    },
+    {
+      "type": "barchart",
+      "title": "Adzuna · postings per salary band ($adzuna)",
+      "description": "Advertised salaries on Adzuna for your search. Jobs by Adzuna.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT to_char(bucket_from, 'FM999G999') AS \"From\", postings AS \"Postings\"\nFROM silver.adzuna_salary_histogram\nWHERE country || ' | ' || coalesce(what, category, 'todo') = ${adzuna:sqlstring}\nORDER BY bucket_from"
+        }
+      ],
+      "options": {
+        "xField": "From",
+        "orientation": "vertical",
+        "showValue": "auto",
+        "legend": {
+          "showLegend": false
+        },
+        "barWidth": 0.75,
+        "barRadius": 0.2,
+        "xTickLabelRotation": 0,
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "color": {
+            "mode": "continuous-BlPu"
+          },
+          "custom": {
+            "fillOpacity": 90,
+            "lineWidth": 0,
+            "gradientMode": "scheme"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 30,
+        "w": 12,
+        "h": 9
+      },
+      "id": 14
+    },
+    {
+      "type": "timeseries",
+      "title": "Adzuna · average advertised salary per month",
+      "description": "Average for the whole category; Adzuna does not give it per keyword. Jobs by Adzuna.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT month::timestamptz AS time, country || ' ' || category AS metric, avg_salary AS value\nFROM silver.adzuna_salary_history ORDER BY 1"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "lineInterpolation": "smooth",
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "showPoints": "never"
+          },
+          "unit": "locale",
+          "color": {
+            "mode": "shades",
+            "fixedColor": "#8B5CF6"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 30,
+        "w": 12,
+        "h": 9
+      },
+      "id": 15
+    },
+    {
+      "type": "table",
+      "title": "Levels.fyi · actual pay by location (USD)",
+      "description": "Data source: Levels.fyi (https://www.levels.fyi). Only with the official API (LEVELS_FYI_API_KEY).",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT job_family AS \"Family\", salary_type AS \"Type\", focus_tags AS \"Focus\",\n       location AS \"Location\",\n       coalesce(yoe_range || ' years', 'all') AS \"Experience\",\n       p25, p50 AS \"Median\", p75, p90, sample_size AS \"Samples\"\nFROM silver.levelsfyi_benchmarks\nORDER BY location, kind DESC, yoe_range"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "custom": {
+            "align": "auto",
+            "filterable": false,
+            "inspect": false,
+            "minWidth": 70
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Role|Rol"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "p25|Median|p75|p90"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Median"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlPu"
+                }
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 150
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 39,
+        "w": 24,
+        "h": 9
+      },
+      "id": 16
+    }
+  ]
+}

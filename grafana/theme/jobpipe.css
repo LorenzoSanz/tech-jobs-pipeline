@@ -1,0 +1,98 @@
+/*
+ * jobpipe look on top of Grafana's dark theme: rounder panels, softer borders
+ * and a blue-to-purple accent. Grafana has no setting for this, so the image
+ * in grafana/Dockerfile links this file from index.html.
+ *
+ * Only data-testid hooks are used (Grafana's class names are generated and
+ * change between builds). The image is pinned, so these stay valid until the
+ * version is bumped; check the dashboards when bumping it.
+ */
+
+:root {
+  --jp-radius: 14px;
+  --jp-radius-sm: 10px;
+  --jp-blue: #3b82f6;
+  --jp-indigo: #6366f1;
+  --jp-purple: #a855f7;
+  --jp-lavender: #c4b5fd;
+  --jp-panel: rgba(24, 27, 38, 0.92);
+  --jp-border: rgba(129, 140, 248, 0.16);
+  --jp-border-hover: rgba(167, 139, 250, 0.38);
+}
+
+/* Page: a faint blue and purple glow behind the grid. */
+body {
+  background:
+    radial-gradient(900px 500px at 0% -10%, rgba(59, 130, 246, 0.10), transparent 60%),
+    radial-gradient(900px 500px at 100% -10%, rgba(168, 85, 247, 0.10), transparent 60%),
+    #0e1016 !important;
+}
+
+/* Panels */
+section[data-testid^="data-testid Panel header"] {
+  border-radius: var(--jp-radius) !important;
+  border: 1px solid var(--jp-border) !important;
+  background: var(--jp-panel) !important;
+  box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.9);
+  overflow: hidden;
+  transition: border-color 160ms ease;
+}
+
+section[data-testid^="data-testid Panel header"]:hover {
+  border-color: var(--jp-border-hover) !important;
+}
+
+section[data-testid^="data-testid Panel header"] h2 {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #d4d7ea;
+}
+
+/* Section headers: bigger, with a gradient bar before the title. */
+[data-testid^="data-testid dashboard-row-title-"] {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #e5e7f5 !important;
+}
+
+[data-testid^="data-testid dashboard-row-title-"]::after {
+  content: "";
+  display: inline-block;
+  width: 36px;
+  height: 3px;
+  margin-left: 12px;
+  vertical-align: middle;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--jp-blue), var(--jp-purple));
+}
+
+/* Filters: rounded pills with a tinted label. */
+[data-testid^="data-testid template variable"] {
+  border-radius: var(--jp-radius-sm);
+  overflow: hidden;
+}
+
+[data-testid="data-testid dashboard controls"] label {
+  background: rgba(99, 102, 241, 0.16) !important;
+  border-color: rgba(129, 140, 248, 0.25) !important;
+  color: var(--jp-lavender) !important;
+  font-weight: 500;
+}
+
+[data-testid="data-testid dashboard controls"] button {
+  border-radius: var(--jp-radius-sm) !important;
+}
+
+/* Tables */
+[role="columnheader"] {
+  color: #a5b4fc !important;
+  font-weight: 600 !important;
+}
+
+[role="row"]:hover [role="cell"] {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+a[href^="http"] {
+  text-decoration-color: rgba(167, 139, 250, 0.5);
+}
