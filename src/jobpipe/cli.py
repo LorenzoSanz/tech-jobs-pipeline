@@ -322,7 +322,30 @@ def build_parser() -> argparse.ArgumentParser:
         help="repeatable: --region ch --region es --region eu (default: ch)",
     )
 
+    load = commands.add_parser("load", help="rebuild the PostgreSQL silver/gold layers from bronze")
+    load.add_argument(
+        "--dsn",
+        default=os.environ.get("JOBPIPE_DATABASE_URL"),
+        help="PostgreSQL URL (default: $JOBPIPE_DATABASE_URL or the docker compose database)",
+    )
+
     return parser
+
+
+def _load(args: argparse.Namespace) -> int:
+    from jobpipe import warehouse
+
+    tables = warehouse.build(args.data_dir)
+    try:
+        counts = warehouse.write(args.dsn or warehouse.DEFAULT_DSN, tables)
+    except RuntimeError as error:
+        logging.error("%s", error)
+        return 2
+    except Exception as error:  # psycopg.OperationalError and friends
+        logging.error("load failed: %s", error)
+        return 1
+    print(json.dumps({"loaded": counts}))
+    return 0
 
 
 def main(argv: Sequence[str] | None = None, http: HttpClient | None = None) -> int:
@@ -340,6 +363,8 @@ def main(argv: Sequence[str] | None = None, http: HttpClient | None = None) -> i
         return _levelsfyi_lookup(args, http or HttpClient())
     if args.command == "verify-boards":
         return _verify_boards(args, http or HttpClient())
+    if args.command == "load":
+        return _load(args)
     return args.handler(args, http or HttpClient(), BronzeWriter(args.data_dir))
 
 

@@ -89,24 +89,28 @@ class PostedSalary:
         return (self.min_annual + self.max_annual) / 2
 
     def regions(self) -> set[str]:
-        """ch, es and/or eu, from the country code or name and the location text."""
-        found = set()
-        country = (self.country or "").strip()
-        iso = country.lower() if len(country) == 2 else None
-        if iso == "ch":
-            found.add("ch")
-        elif iso == "es":
-            found.add("es")
-        elif iso in EUROPE_ISO:
-            found.add("eu")
-        text = " ".join(filter(None, [self.location, None if iso else country]))
-        for region, pattern in REGION_PATTERNS.items():
-            if pattern.search(text):
-                found.add(region)
-        return found
+        return regions_of(self.location, self.country)
 
 
-def _plain(text: str) -> str:
+def regions_of(location: str | None, country: str | None = None) -> set[str]:
+    """ch, es and/or eu, from a country code or name and free location text."""
+    found = set()
+    country = (country or "").strip()
+    iso = country.lower() if len(country) == 2 else None
+    if iso == "ch":
+        found.add("ch")
+    elif iso == "es":
+        found.add("es")
+    elif iso in EUROPE_ISO:
+        found.add("eu")
+    text = " ".join(filter(None, [location, None if iso else country]))
+    for region, pattern in REGION_PATTERNS.items():
+        if pattern.search(text):
+            found.add(region)
+    return found
+
+
+def plain_text(text: str) -> str:
     text = html.unescape(html.unescape(text or ""))
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", text))
 
@@ -145,7 +149,7 @@ def ranges_in_text(text: str) -> list[tuple[str, float, float, str]]:
 
     Only ranges with an explicit currency count; "5-10 years" never matches.
     """
-    plain = _plain(text)
+    plain = plain_text(text)
     found = []
     for match in RANGE_PATTERN.finditer(plain):
         currency = _currency(match["c1"], match["c2"], match["c3"])
@@ -233,7 +237,7 @@ def _adzuna(record: Mapping[str, Any]) -> Iterator[PostedSalary]:
 
 def _hn(record: Mapping[str, Any]) -> Iterator[PostedSalary]:
     text = record["payload"]["comment"]["text"]
-    header = _plain(text.split("<p>")[0])
+    header = plain_text(text.split("<p>")[0])
     parts = [p.strip() for p in header.split("|")]
     company = parts[0][:80] if parts else None
     url = f"https://news.ycombinator.com/item?id={record['payload']['comment']['id']}"
