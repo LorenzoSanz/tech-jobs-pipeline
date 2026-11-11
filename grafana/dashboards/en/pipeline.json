@@ -1,9 +1,10 @@
 {
   "uid": "jobpipe-pipeline",
-  "title": "Salud del pipeline",
-  "description": "Qué se ha recogido, cuándo, y si alguna fuente ha dejado de devolver datos.",
+  "title": "Pipeline health",
+  "description": "What was collected, when, and whether a source stopped returning data.",
   "tags": [
-    "jobpipe"
+    "jobpipe",
+    "en"
   ],
   "timezone": "browser",
   "schemaVersion": 39,
@@ -29,18 +30,31 @@
     {
       "type": "dashboards",
       "tags": [
-        "jobpipe"
+        "jobpipe",
+        "en"
       ],
       "asDropdown": true,
-      "title": "Otros paneles",
+      "title": "Other dashboards",
       "includeVars": false,
       "keepTime": true
+    },
+    {
+      "type": "link",
+      "title": "Español",
+      "url": "/d/jobpipe-pipeline-es",
+      "icon": "doc",
+      "tooltip": "Ver en español",
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": false,
+      "asDropdown": false,
+      "tags": []
     }
   ],
   "panels": [
     {
       "type": "row",
-      "title": "Estado",
+      "title": "Status",
       "collapsed": false,
       "panels": [],
       "gridPos": {
@@ -53,7 +67,7 @@
     },
     {
       "type": "stat",
-      "title": "Última carga en PostgreSQL",
+      "title": "",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -80,17 +94,19 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "justifyMode": "center",
         "text": {
-          "valueSize": 34
+          "titleSize": 14,
+          "valueSize": 30
         }
       },
       "fieldConfig": {
         "defaults": {
           "noValue": "—",
+          "displayName": "Last load into PostgreSQL",
           "unit": "dateTimeFromNow",
           "decimals": 0,
           "color": {
@@ -100,7 +116,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#5794F2",
+                "color": "#3B82F6",
                 "value": null
               }
             ]
@@ -118,7 +134,7 @@
     },
     {
       "type": "stat",
-      "title": "Ofertas en silver",
+      "title": "",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -145,17 +161,19 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "justifyMode": "center",
         "text": {
-          "valueSize": 34
+          "titleSize": 14,
+          "valueSize": 30
         }
       },
       "fieldConfig": {
         "defaults": {
           "noValue": "—",
+          "displayName": "Postings in silver",
           "unit": "locale",
           "decimals": 0,
           "color": {
@@ -165,7 +183,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#5794F2",
+                "color": "#5F73F6",
                 "value": null
               }
             ]
@@ -183,7 +201,7 @@
     },
     {
       "type": "stat",
-      "title": "Ejecuciones en el periodo",
+      "title": "",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -210,17 +228,19 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "justifyMode": "center",
         "text": {
-          "valueSize": 34
+          "titleSize": 14,
+          "valueSize": 30
         }
       },
       "fieldConfig": {
         "defaults": {
           "noValue": "—",
+          "displayName": "Runs in the period",
           "unit": "locale",
           "decimals": 0,
           "color": {
@@ -230,7 +250,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#5794F2",
+                "color": "#8464F7",
                 "value": null
               }
             ]
@@ -248,7 +268,7 @@
     },
     {
       "type": "stat",
-      "title": "Días sin recoger (peor fuente)",
+      "title": "",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -275,17 +295,19 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "justifyMode": "center",
         "text": {
-          "valueSize": 34
+          "titleSize": 14,
+          "valueSize": 30
         }
       },
       "fieldConfig": {
         "defaults": {
           "noValue": "—",
+          "displayName": "Days without data (worst source)",
           "unit": "locale",
           "decimals": 0,
           "color": {
@@ -295,15 +317,15 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#73BF69",
+                "color": "#3B82F6",
                 "value": null
               },
               {
-                "color": "#FF9830",
+                "color": "#A855F7",
                 "value": 2
               },
               {
-                "color": "#F2495C",
+                "color": "#D946EF",
                 "value": 7
               }
             ]
@@ -321,7 +343,7 @@
     },
     {
       "type": "row",
-      "title": "Por fuente",
+      "title": "By source",
       "collapsed": false,
       "panels": [],
       "gridPos": {
@@ -334,7 +356,7 @@
     },
     {
       "type": "table",
-      "title": "Fuentes",
+      "title": "Sources",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -350,12 +372,12 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT source AS \"Fuente\", runs AS \"Ejecuciones\", records AS \"Registros\", to_char(last_ingest, 'YYYY-MM-DD') AS \"Última recogida\",\n       current_date - last_ingest AS \"Días\"\nFROM gold.source_health ORDER BY 1"
+          "rawSql": "SELECT source AS \"Source\", runs AS \"Runs\", records AS \"Records\",\n       to_char(last_ingest, 'YYYY-MM-DD') AS \"Last run\", current_date - last_ingest AS \"Days\"\nFROM gold.source_health ORDER BY 1"
         }
       ],
       "options": {
         "showHeader": true,
-        "cellHeight": "sm",
+        "cellHeight": "md",
         "footer": {
           "show": false
         }
@@ -370,7 +392,46 @@
             "minWidth": 70
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Role|Rol"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Records"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlPu"
+                }
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 150
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "x": 0,
@@ -382,7 +443,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Registros por ejecución",
+      "title": "Records per run",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -417,14 +478,120 @@
           "noValue": "—",
           "custom": {
             "drawStyle": "points",
-            "pointSize": 7
+            "pointSize": 9
           },
           "unit": "locale",
           "color": {
             "mode": "palette-classic"
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hn"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#60A5FA"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "greenhouse"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#7495F8"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "lever"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8885F6"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ashby"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9C76F4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "adzuna"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B166F3"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "adzuna_salary"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C556F1"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "levelsfyi"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#D946EF"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "x": 12,

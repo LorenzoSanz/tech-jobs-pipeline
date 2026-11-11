@@ -1,9 +1,10 @@
 {
-  "uid": "jobpipe-salaries",
+  "uid": "jobpipe-salaries-es",
   "title": "Salarios",
   "description": "Rangos salariales publicados en ofertas. Bruto anual, sin conversión de divisas.",
   "tags": [
-    "jobpipe"
+    "jobpipe",
+    "es"
   ],
   "timezone": "browser",
   "schemaVersion": 39,
@@ -73,8 +74,8 @@
           "type": "grafana-postgresql-datasource",
           "uid": "jobpipe-pg"
         },
-        "query": "SELECT role FROM gold.salaries GROUP BY 1 ORDER BY count(*) DESC",
-        "definition": "SELECT role FROM gold.salaries GROUP BY 1 ORDER BY count(*) DESC",
+        "query": "SELECT role AS __value, CASE role WHEN 'product' THEN 'Producto y diseño' WHEN 'eng_management' THEN 'Gestión técnica' WHEN 'ml' THEN 'ML / IA' WHEN 'data' THEN 'Datos' WHEN 'devops' THEN 'DevOps / SRE / Plataforma' WHEN 'security' THEN 'Seguridad' WHEN 'mobile' THEN 'Móvil' WHEN 'qa' THEN 'QA / Test' WHEN 'embedded' THEN 'Embebido / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Ingeniería (general)' WHEN 'other' THEN 'Otros (no técnicos)' ELSE role END AS __text FROM gold.salaries GROUP BY role ORDER BY count(*) DESC",
+        "definition": "SELECT role AS __value, CASE role WHEN 'product' THEN 'Producto y diseño' WHEN 'eng_management' THEN 'Gestión técnica' WHEN 'ml' THEN 'ML / IA' WHEN 'data' THEN 'Datos' WHEN 'devops' THEN 'DevOps / SRE / Plataforma' WHEN 'security' THEN 'Seguridad' WHEN 'mobile' THEN 'Móvil' WHEN 'qa' THEN 'QA / Test' WHEN 'embedded' THEN 'Embebido / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Ingeniería (general)' WHEN 'other' THEN 'Otros (no técnicos)' ELSE role END AS __text FROM gold.salaries GROUP BY role ORDER BY count(*) DESC",
         "refresh": 1,
         "multi": true,
         "includeAll": true,
@@ -455,18 +456,31 @@
     {
       "type": "dashboards",
       "tags": [
-        "jobpipe"
+        "jobpipe",
+        "es"
       ],
       "asDropdown": true,
       "title": "Otros paneles",
       "includeVars": false,
       "keepTime": true
+    },
+    {
+      "type": "link",
+      "title": "English",
+      "url": "/d/jobpipe-salaries",
+      "icon": "doc",
+      "tooltip": "View in English",
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": false,
+      "asDropdown": false,
+      "tags": []
     }
   ],
   "panels": [
     {
       "type": "row",
-      "title": "Resumen ($currency, punto medio del rango)",
+      "title": "Resumen · $currency, punto medio del rango",
       "collapsed": false,
       "panels": [],
       "gridPos": {
@@ -479,7 +493,7 @@
     },
     {
       "type": "stat",
-      "title": "Ofertas con salario",
+      "title": "",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -506,17 +520,19 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "justifyMode": "center",
         "text": {
-          "valueSize": 34
+          "titleSize": 14,
+          "valueSize": 30
         }
       },
       "fieldConfig": {
         "defaults": {
           "noValue": "—",
+          "displayName": "Ofertas con salario",
           "unit": "locale",
           "decimals": 0,
           "color": {
@@ -526,7 +542,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#5794F2",
+                "color": "#3B82F6",
                 "value": null
               }
             ]
@@ -544,7 +560,7 @@
     },
     {
       "type": "stat",
-      "title": "p25",
+      "title": "",
       "description": "Una de cada cuatro ofertas paga menos que esto.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -571,17 +587,19 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "justifyMode": "center",
         "text": {
-          "valueSize": 34
+          "titleSize": 14,
+          "valueSize": 30
         }
       },
       "fieldConfig": {
         "defaults": {
           "noValue": "—",
+          "displayName": "p25",
           "unit": "locale",
           "decimals": 0,
           "color": {
@@ -591,7 +609,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#5794F2",
+                "color": "#5179F6",
                 "value": null
               }
             ]
@@ -609,7 +627,7 @@
     },
     {
       "type": "stat",
-      "title": "Mediana",
+      "title": "",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -636,17 +654,19 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "justifyMode": "center",
         "text": {
-          "valueSize": 34
+          "titleSize": 14,
+          "valueSize": 30
         }
       },
       "fieldConfig": {
         "defaults": {
           "noValue": "—",
+          "displayName": "Mediana",
           "unit": "locale",
           "decimals": 0,
           "color": {
@@ -656,7 +676,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#5794F2",
+                "color": "#6770F6",
                 "value": null
               }
             ]
@@ -674,7 +694,7 @@
     },
     {
       "type": "stat",
-      "title": "p75",
+      "title": "",
       "description": "Una de cada cuatro ofertas paga más que esto.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -701,17 +721,19 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "justifyMode": "center",
         "text": {
-          "valueSize": 34
+          "titleSize": 14,
+          "valueSize": 30
         }
       },
       "fieldConfig": {
         "defaults": {
           "noValue": "—",
+          "displayName": "p75",
           "unit": "locale",
           "decimals": 0,
           "color": {
@@ -721,7 +743,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#5794F2",
+                "color": "#7C67F7",
                 "value": null
               }
             ]
@@ -739,7 +761,7 @@
     },
     {
       "type": "stat",
-      "title": "p90",
+      "title": "",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -766,17 +788,19 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "justifyMode": "center",
         "text": {
-          "valueSize": 34
+          "titleSize": 14,
+          "valueSize": 30
         }
       },
       "fieldConfig": {
         "defaults": {
           "noValue": "—",
+          "displayName": "p90",
           "unit": "locale",
           "decimals": 0,
           "color": {
@@ -786,7 +810,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#5794F2",
+                "color": "#925EF7",
                 "value": null
               }
             ]
@@ -804,7 +828,7 @@
     },
     {
       "type": "stat",
-      "title": "Tu oferta supera al",
+      "title": "",
       "description": "Porcentaje de ofertas cuyo punto medio es menor o igual que tu oferta.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -831,17 +855,19 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "justifyMode": "center",
         "text": {
-          "valueSize": 34
+          "titleSize": 14,
+          "valueSize": 30
         }
       },
       "fieldConfig": {
         "defaults": {
           "noValue": "—",
+          "displayName": "Tu oferta supera al",
           "unit": "percent",
           "decimals": 0,
           "color": {
@@ -851,19 +877,19 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#F2495C",
+                "color": "#D946EF",
                 "value": null
               },
               {
-                "color": "#FF9830",
+                "color": "#A855F7",
                 "value": 25
               },
               {
-                "color": "#FADE2A",
+                "color": "#6366F1",
                 "value": 50
               },
               {
-                "color": "#73BF69",
+                "color": "#3B82F6",
                 "value": 75
               }
             ]
@@ -924,14 +950,14 @@
         "defaults": {
           "noValue": "—",
           "unit": "locale",
-          "decimals": 0,
           "color": {
             "mode": "fixed",
-            "fixedColor": "#5794F2"
+            "fixedColor": "#6366F1"
           },
           "custom": {
-            "fillOpacity": 80,
-            "lineWidth": 0
+            "fillOpacity": 85,
+            "lineWidth": 0,
+            "gradientMode": "opacity"
           }
         },
         "overrides": []
@@ -962,12 +988,12 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT role AS \"Rol\", count(*) AS \"Ofertas\",\n       percentile_cont(0.25) WITHIN GROUP (ORDER BY midpoint) AS \"p25\",\n       percentile_cont(0.5)  WITHIN GROUP (ORDER BY midpoint) AS \"Mediana\",\n       percentile_cont(0.75) WITHIN GROUP (ORDER BY midpoint) AS \"p75\"\nFROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)\n\nGROUP BY 1 ORDER BY \"Mediana\" DESC"
+          "rawSql": "SELECT CASE role WHEN 'product' THEN 'Producto y diseño' WHEN 'eng_management' THEN 'Gestión técnica' WHEN 'ml' THEN 'ML / IA' WHEN 'data' THEN 'Datos' WHEN 'devops' THEN 'DevOps / SRE / Plataforma' WHEN 'security' THEN 'Seguridad' WHEN 'mobile' THEN 'Móvil' WHEN 'qa' THEN 'QA / Test' WHEN 'embedded' THEN 'Embebido / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Ingeniería (general)' WHEN 'other' THEN 'Otros (no técnicos)' ELSE role END AS \"Rol\", count(*) AS \"Ofertas\",\n       percentile_cont(0.25) WITHIN GROUP (ORDER BY midpoint) AS \"p25\",\n       percentile_cont(0.5)  WITHIN GROUP (ORDER BY midpoint) AS \"Mediana\",\n       percentile_cont(0.75) WITHIN GROUP (ORDER BY midpoint) AS \"p75\"\nFROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)\n\nGROUP BY role ORDER BY 4 DESC"
         }
       ],
       "options": {
         "showHeader": true,
-        "cellHeight": "sm",
+        "cellHeight": "md",
         "footer": {
           "show": false
         }
@@ -986,6 +1012,18 @@
           {
             "matcher": {
               "id": "byRegexp",
+              "options": "Role|Rol"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
               "options": "p25|Mediana|p75"
             },
             "properties": [
@@ -1000,6 +1038,32 @@
               {
                 "id": "custom.align",
                 "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Mediana"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlPu"
+                }
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 150
               }
             ]
           }
@@ -1044,12 +1108,12 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT company AS \"Empresa\", title AS \"Puesto\", role AS \"Rol\", coalesce(location, country) AS \"Lugar\",\n       min_annual AS \"Mínimo\", max_annual AS \"Máximo\", to_char(posted_at, 'YYYY-MM-DD') AS \"Publicada\", source AS \"Fuente\", url\nFROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)\n\nORDER BY max_annual DESC LIMIT 100"
+          "rawSql": "SELECT company AS \"Empresa\", title AS \"Puesto\", CASE role WHEN 'product' THEN 'Producto y diseño' WHEN 'eng_management' THEN 'Gestión técnica' WHEN 'ml' THEN 'ML / IA' WHEN 'data' THEN 'Datos' WHEN 'devops' THEN 'DevOps / SRE / Plataforma' WHEN 'security' THEN 'Seguridad' WHEN 'mobile' THEN 'Móvil' WHEN 'qa' THEN 'QA / Test' WHEN 'embedded' THEN 'Embebido / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Ingeniería (general)' WHEN 'other' THEN 'Otros (no técnicos)' ELSE role END AS \"Rol\",\n       coalesce(location, country) AS \"Lugar\",\n       min_annual AS \"Mínimo\", max_annual AS \"Máximo\",\n       to_char(posted_at, 'YYYY-MM-DD') AS \"Publicada\", source AS \"Fuente\", url\nFROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)\n\nORDER BY max_annual DESC LIMIT 100"
         }
       ],
       "options": {
         "showHeader": true,
-        "cellHeight": "sm",
+        "cellHeight": "md",
         "footer": {
           "show": false
         }
@@ -1065,6 +1129,18 @@
           }
         },
         "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Role|Rol"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 180
+              }
+            ]
+          },
           {
             "matcher": {
               "id": "byName",
@@ -1116,6 +1192,32 @@
               {
                 "id": "custom.align",
                 "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Máximo"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlPu"
+                }
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 150
               }
             ]
           }
@@ -1170,19 +1272,23 @@
         "legend": {
           "showLegend": false
         },
-        "barWidth": 0.8,
-        "xTickLabelRotation": 0
+        "barWidth": 0.75,
+        "barRadius": 0.2,
+        "xTickLabelRotation": 0,
+        "tooltip": {
+          "mode": "single"
+        }
       },
       "fieldConfig": {
         "defaults": {
           "noValue": "—",
           "color": {
-            "mode": "fixed",
-            "fixedColor": "#5794F2"
+            "mode": "continuous-BlPu"
           },
           "custom": {
-            "fillOpacity": 80,
-            "lineWidth": 0
+            "fillOpacity": 90,
+            "lineWidth": 0,
+            "gradientMode": "scheme"
           }
         },
         "overrides": []
@@ -1233,12 +1339,15 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
             "showPoints": "never"
           },
           "unit": "locale",
           "color": {
-            "mode": "palette-classic"
+            "mode": "shades",
+            "fixedColor": "#8B5CF6"
           }
         },
         "overrides": []
@@ -1269,12 +1378,12 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT job_family AS \"Familia\", salary_type AS \"Tipo\", focus_tags AS \"Foco\", location AS \"Ubicación\",\n       coalesce(yoe_range || ' años', 'todos') AS \"Experiencia\",\n       p25, p50 AS \"Mediana\", p75, p90, sample_size AS \"Muestras\"\nFROM silver.levelsfyi_benchmarks\nORDER BY location, kind DESC, yoe_range"
+          "rawSql": "SELECT job_family AS \"Familia\", salary_type AS \"Tipo\", focus_tags AS \"Foco\",\n       location AS \"Ubicación\",\n       coalesce(yoe_range || ' años', 'todos') AS \"Experiencia\",\n       p25, p50 AS \"Mediana\", p75, p90, sample_size AS \"Muestras\"\nFROM silver.levelsfyi_benchmarks\nORDER BY location, kind DESC, yoe_range"
         }
       ],
       "options": {
         "showHeader": true,
-        "cellHeight": "sm",
+        "cellHeight": "md",
         "footer": {
           "show": false
         }
@@ -1293,6 +1402,18 @@
           {
             "matcher": {
               "id": "byRegexp",
+              "options": "Role|Rol"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
               "options": "p25|Mediana|p75|p90"
             },
             "properties": [
@@ -1307,6 +1428,32 @@
               {
                 "id": "custom.align",
                 "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Mediana"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlPu"
+                }
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 150
               }
             ]
           }

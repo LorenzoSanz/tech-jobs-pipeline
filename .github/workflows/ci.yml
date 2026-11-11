@@ -44,6 +44,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - name: Dashboard JSON matches build_dashboards.py
+        run: |
+          python grafana/build_dashboards.py grafana/dashboards
+          git diff --exit-code -- grafana/dashboards
       - name: Install the PostgreSQL driver
         run: pip install "psycopg[binary]>=3.2"
       - name: Load into PostgreSQL and run every dashboard query
@@ -51,6 +55,13 @@ jobs:
         env:
           PYTHONPATH: src
           JOBPIPE_TEST_DATABASE_URL: postgresql://jobpipe:jobpipe@localhost:5432/jobpipe
+
+  grafana-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Grafana with the jobpipe theme
+        run: docker build -t jobpipe-grafana grafana
 
   commit-messages:
     if: github.event_name == 'pull_request'

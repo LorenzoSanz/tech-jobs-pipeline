@@ -1,7 +1,7 @@
 # Local warehouse and dashboards. Ports are bound to 127.0.0.1 only.
 #
 #   cp .env.example .env        # optional: change the passwords
-#   docker compose up -d
+#   docker compose up -d --build
 #   jobpipe load                # bronze -> PostgreSQL
 #   open http://localhost:3000
 name: jobpipe
@@ -26,7 +26,8 @@ services:
       retries: 10
 
   grafana:
-    image: grafana/grafana-oss:11.4.0
+    build: ./grafana            # grafana-oss:11.4.0 plus grafana/theme/jobpipe.css
+    image: jobpipe-grafana:11.4.0
     depends_on:
       postgres:
         condition: service_healthy
@@ -34,7 +35,7 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
-      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/salaries.json
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/en/salaries.json
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:-grafana}

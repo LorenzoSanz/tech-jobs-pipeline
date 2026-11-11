@@ -22,7 +22,7 @@ CREATE TABLE silver.postings (
     last_seen   timestamptz NOT NULL, -- latest snapshot that contained it
     snapshots   integer     NOT NULL,
     regions     text[]      NOT NULL, -- ch, es, eu; empty when unknown
-    role        text        NOT NULL, -- role family from the title, see jobpipe/roles.py
+    role        text        NOT NULL, -- role family key from the title, see jobpipe/roles.py
     PRIMARY KEY (source, source_id)
 );
 

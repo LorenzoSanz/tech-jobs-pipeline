@@ -10,6 +10,7 @@ from jobpipe import warehouse
 from jobpipe.bronze import BronzeWriter, RawItem
 
 DASHBOARDS = Path(__file__).resolve().parent.parent / "grafana" / "dashboards"
+DASHBOARD_FILES = sorted(DASHBOARDS.glob("*/*.json"))
 TEST_DSN = os.environ.get("JOBPIPE_TEST_DATABASE_URL")
 
 
@@ -68,7 +69,7 @@ class BuildTest(unittest.TestCase):
         self.assertEqual(swiss["last_seen"], datetime(2026, 11, 9, 8, tzinfo=timezone.utc))
         self.assertEqual(swiss["snapshots"], 2)
         self.assertEqual(swiss["regions"], ["ch"])
-        self.assertEqual(swiss["role"], "Backend")
+        self.assertEqual(swiss["role"], "backend")
         self.assertEqual(rows["7"]["regions"], ["es"])
 
     def test_salaries_come_from_the_newest_snapshot(self):
@@ -94,9 +95,14 @@ class BuildTest(unittest.TestCase):
             self.skipTest("psycopg is installed")
 
 
+def panel_name(panel: dict) -> str:
+    """Title, or the name shown inside a KPI card, which has no header."""
+    return panel["title"] or panel["fieldConfig"]["defaults"].get("displayName", "")
+
+
 def panel_sql(dashboard: dict) -> list[tuple[str, str]]:
     """Every panel and variable query, with Grafana's macros and variables filled in."""
-    queries = [(p["title"], t["rawSql"]) for p in dashboard["panels"] for t in p.get("targets", [])]
+    queries = [(panel_name(p), t["rawSql"]) for p in dashboard["panels"] for t in p.get("targets", [])]
     queries += [(f"variable {v['name']}", v["query"]) for v in dashboard["templating"]["list"] if v["type"] == "query"]
     values = {
         "region": "'ch','es','eu','other'", "currency:sqlstring": "'CHF'", "role": "'__all'",
@@ -148,39 +154,59 @@ class PostgresTest(unittest.TestCase):
         self.assertEqual(float(midpoint[0][0]), 135000)
 
     def test_every_dashboard_query_runs(self):
-        for path in sorted(DASHBOARDS.glob("*.json")):
+        for path in DASHBOARD_FILES:
             dashboard = json.loads(path.read_text(encoding="utf-8"))
             for title, sql in panel_sql(dashboard):
-                with self.subTest(dashboard=path.name, panel=title):
+                with self.subTest(dashboard=f"{path.parent.name}/{path.name}", panel=title):
                     self.assertNotIn("$", re.sub(r"\$\$", "", sql), "unfilled Grafana variable")
                     self.query(sql)
 
     def test_offer_percentile_on_the_salary_dashboard(self):
-        dashboard = json.loads((DASHBOARDS / "salaries.json").read_text(encoding="utf-8"))
-        [(_, sql)] = [q for q in panel_sql(dashboard) if q[0] == "Tu oferta supera al"]
+        for lang, title in [("en", "Your offer beats"), ("es", "Tu oferta supera al")]:
+            dashboard = json.loads((DASHBOARDS / lang / "salaries.json").read_text(encoding="utf-8"))
+            [(_, sql)] = [q for q in panel_sql(dashboard) if q[0] == title]
 
-        self.assertEqual(float(self.query(sql)[0][0]), 0.0)  # 100k is below the CHF 120-150k posting
+            self.assertEqual(float(self.query(sql)[0][0]), 0.0)  # 100k is below the CHF 120-150k posting
+
+    def test_role_labels_follow_the_language(self):
+        for lang, data in [("en", "Data"), ("es", "Datos")]:
+            dashboard = json.loads((DASHBOARDS / lang / "market.json").read_text(encoding="utf-8"))
+            [(_, sql)] = [q for q in panel_sql(dashboard) if q[0] == "variable role"]
+
+            self.assertEqual(sorted(self.query(sql)), [("backend", "Backend"), ("data", data)])
 
 
 class DashboardFilesTest(unittest.TestCase):
     def test_dashboards_are_valid_and_use_the_provisioned_datasource(self):
         uids = set()
-        for path in sorted(DASHBOARDS.glob("*.json")):
+        for path in DASHBOARD_FILES:
             dashboard = json.loads(path.read_text(encoding="utf-8"))
             uids.add(dashboard["uid"])
             for panel in dashboard["panels"]:
                 if panel["type"] == "row":
                     continue
-                self.assertEqual(panel["datasource"]["uid"], "jobpipe-pg", f"{path.name}: {panel['title']}")
-        self.assertEqual(uids, {"jobpipe-salaries", "jobpipe-market", "jobpipe-pipeline"})
+                self.assertEqual(panel["datasource"]["uid"], "jobpipe-pg", f"{path}: {panel_name(panel)}")
+        names = {"jobpipe-salaries", "jobpipe-market", "jobpipe-pipeline"}
+        self.assertEqual(uids, names | {f"{uid}-es" for uid in names})
+
+    def test_languages_have_the_same_layout_and_filters(self):
+        for name in ("salaries", "market", "pipeline"):
+            en, es = (json.loads((DASHBOARDS / lang / f"{name}.json").read_text(encoding="utf-8")) for lang in ("en", "es"))
+            with self.subTest(dashboard=name):
+                self.assertEqual([p["gridPos"] for p in en["panels"]], [p["gridPos"] for p in es["panels"]])
+                self.assertEqual([v["name"] for v in en["templating"]["list"]], [v["name"] for v in es["templating"]["list"]])
+                self.assertNotEqual(en["title"], es["title"])
+                [switch] = [link for link in en["links"] if link["type"] == "link"]
+                self.assertEqual(switch["url"], f"/d/{es['uid']}")
+                self.assertTrue(switch["includeVars"])
 
     def test_every_filter_is_a_dropdown(self):
-        for path in sorted(DASHBOARDS.glob("*.json")):
+        for path in DASHBOARD_FILES:
             for variable in json.loads(path.read_text(encoding="utf-8"))["templating"]["list"]:
                 self.assertIn(variable["type"], {"custom", "query"}, f"{path.name}: {variable['name']}")
 
     def test_panels_fill_whole_rows(self):
-        for path in sorted(DASHBOARDS.glob("*.json")):
+        for path in DASHBOARD_FILES:
             rows: dict[int, int] = {}
             for panel in json.loads(path.read_text(encoding="utf-8"))["panels"]:
                 rows[panel["gridPos"]["y"]] = rows.get(panel["gridPos"]["y"], 0) + panel["gridPos"]["w"]
