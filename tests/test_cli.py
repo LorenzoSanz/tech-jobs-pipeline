@@ -148,6 +148,17 @@ class CliTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(out)["records"], 1)
 
+    def test_verify_boards_reads_discover_output_and_prints_kept_boards(self):
+        candidates = self.root / "candidates.toml"
+        candidates.write_text('[lever]\nboards = [\n  "acme",  # 3\n]\n', encoding="utf-8")
+        transport = FakeTransport()
+        transport.add(body=[{"id": "a1", "categories": {"location": "Zurich"}}])
+
+        code, out = self.run_cli("verify-boards", "--boards", str(candidates), transport=transport)
+
+        self.assertEqual(code, 0)
+        self.assertIn('[lever]\nboards = [\n  "acme",  # 1/1\n]', out)
+
 
 if __name__ == "__main__":
     unittest.main()

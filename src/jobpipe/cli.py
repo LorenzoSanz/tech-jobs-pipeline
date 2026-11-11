@@ -1,4 +1,4 @@
-"""Command line entry point: ``jobpipe ingest <source>``, ``discover-boards`` and ``salaries``.
+"""Command line entry point: ``jobpipe ingest <source>``, board discovery and ``salaries``.
 
 Logs go to stderr; one JSON summary line per bronze write goes to stdout, so a
 scheduler can parse the result of each run.
@@ -22,6 +22,7 @@ from jobpipe.discovery import REGION_KEYWORDS, discover_from_hn, location_patter
 from jobpipe.http import HttpClient, HttpError
 from jobpipe import salary
 from jobpipe.sources import adzuna, ats, hn, levelsfyi
+from jobpipe.verification import render_toml, verify
 
 DEFAULT_DATA_DIR = Path(os.environ.get("JOBPIPE_DATA_DIR", "data/bronze"))
 DEFAULT_BOARDS_FILE = Path("config/boards.toml")
@@ -185,7 +186,9 @@ def _salaries(args: argparse.Namespace) -> int:
 
 def _discover_boards(args: argparse.Namespace) -> int:
     regions = args.region or ["ch"]
-    counts = discover_from_hn(read_records(args.data_dir, hn.SOURCE), location_pattern(regions))
+    counts = discover_from_hn(
+        read_records(args.data_dir, hn.SOURCE), location_pattern(regions), since=args.since
+    )
     print(f"# Boards linked from HN postings that mention a location in: {', '.join(regions)}.")
     print("# Review each one before adding it to config/boards.toml. Number = postings.")
     for name, counter in counts.items():
@@ -195,6 +198,16 @@ def _discover_boards(args: argparse.Namespace) -> int:
                 print(f'  "{slug}",  # {count}')
         print("]")
     return 0
+
+
+def _verify_boards(args: argparse.Namespace, http: HttpClient) -> int:
+    candidates = tomllib.loads(args.boards.read_text(encoding="utf-8-sig"))
+    boards = {name: section.get("boards", []) for name, section in candidates.items()}
+    checks = verify(http, boards, location_pattern(args.region or ["ch"]))
+    print(render_toml(checks), end="")
+    kept = sum(check.keep for check in checks)
+    logging.info("kept %d of %d boards", kept, len(checks))
+    return 0 if kept else 1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -288,12 +301,26 @@ def build_parser() -> argparse.ArgumentParser:
     discover = commands.add_parser("discover-boards", help="suggest ATS boards from collected HN data")
     discover.add_argument("--min-count", type=int, default=1)
     discover.add_argument(
+        "--since", type=date.fromisoformat, help="YYYY-MM-DD; ignore older HN postings"
+    )
+    discover.add_argument(
         "--region",
         action="append",
         choices=sorted(REGION_KEYWORDS),
         help="repeatable: --region ch --region es --region eu (default: ch)",
     )
     discover.set_defaults(handler=None)
+
+    verify_parser = commands.add_parser(
+        "verify-boards", help="keep only candidate boards that answer and hire in the region"
+    )
+    verify_parser.add_argument("--boards", type=Path, required=True, help="output of discover-boards")
+    verify_parser.add_argument(
+        "--region",
+        action="append",
+        choices=sorted(REGION_KEYWORDS),
+        help="repeatable: --region ch --region es --region eu (default: ch)",
+    )
 
     return parser
 
@@ -311,6 +338,8 @@ def main(argv: Sequence[str] | None = None, http: HttpClient | None = None) -> i
         return _salaries(args)
     if args.command == "levelsfyi-lookup":
         return _levelsfyi_lookup(args, http or HttpClient())
+    if args.command == "verify-boards":
+        return _verify_boards(args, http or HttpClient())
     return args.handler(args, http or HttpClient(), BronzeWriter(args.data_dir))
 
 

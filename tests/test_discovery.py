@@ -1,10 +1,12 @@
 import unittest
 
+from datetime import date
+
 from jobpipe.discovery import discover_from_hn, extract_boards, location_pattern
 
 
-def hn_record(text: str) -> dict:
-    return {"payload": {"comment": {"text": text}}}
+def hn_record(text: str, event_time: str = "2025-01-01T00:00:00+00:00") -> dict:
+    return {"event_time": event_time, "payload": {"comment": {"text": text}}}
 
 
 class ExtractBoardsTest(unittest.TestCase):
@@ -65,3 +67,13 @@ class DiscoverFromHnTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_since_ignores_older_postings(self):
+        records = [
+            hn_record("Old | Zurich | https://jobs.lever.co/old", "2014-03-01T10:00:00+00:00"),
+            hn_record("New | Zurich | https://jobs.lever.co/new", "2024-01-01T00:00:00+00:00"),
+        ]
+
+        counts = discover_from_hn(records, since=date(2024, 1, 1))
+
+        self.assertEqual(dict(counts["lever"]), {"new": 1})
