@@ -99,5 +99,15 @@ class IngestTest(unittest.TestCase):
         self.assertEqual(len(failures), 1)
 
 
+class BoardNameTest(unittest.TestCase):
+    def test_board_names_with_spaces_are_url_encoded(self):
+        transport = FakeTransport()
+        transport.add(body={"jobs": []})
+
+        list(ats.ashby_jobs(fast_client(transport), "Acme AI"))
+
+        self.assertTrue(transport.urls()[0].startswith(f"{ats.ASHBY_API}/Acme%20AI?"))
+
+
 if __name__ == "__main__":
     unittest.main()
