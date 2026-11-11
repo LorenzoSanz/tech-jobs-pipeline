@@ -17,3 +17,10 @@ jobpipe = "jobpipe.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.optional-dependencies]
+# PostgreSQL loader for `jobpipe load` (the collectors need nothing).
+db = ["psycopg[binary]>=3.2"]
+
+[tool.setuptools.package-data]
+"jobpipe.warehouse" = ["schema.sql"]
