@@ -112,6 +112,23 @@ class ExtractorsTest(unittest.TestCase):
         self.assertEqual((by_title["SRE"].currency, by_title["SRE"].max_annual), ("CHF", 160_000))
         self.assertEqual(by_title["SRE"].regions(), {"ch"})
 
+    def test_recruitee_structured_salary_and_text_fallback(self):
+        structured = {"id": 1, "title": "Backend Developer", "location": "Zürich", "country_code": "CH",
+                      "salary": {"min": "8000", "max": "10000", "period": "month", "currency": "CHF"}}
+        prose = {"id": 2, "title": "Data Engineer", "location": "Madrid", "country_code": "ES",
+                 "salary": {"min": None, "max": None, "period": None, "currency": None},
+                 "description": "<p>Salary: €50k - €65k</p>"}  # fmt: skip
+        write(self.root, "recruitee", [
+            RawItem("acme:1", {"board": "acme", "job": structured}),
+            RawItem("acme:2", {"board": "acme", "job": prose}),
+        ])  # fmt: skip
+
+        by_title = {p.title: p for p in salary.posted_salaries(self.root, ["recruitee"])}
+
+        self.assertEqual((by_title["Backend Developer"].min_annual, by_title["Backend Developer"].currency), (96_000, "CHF"))
+        self.assertEqual(by_title["Backend Developer"].regions(), {"ch"})
+        self.assertEqual((by_title["Data Engineer"].max_annual, by_title["Data Engineer"].currency), (65_000, "EUR"))
+
     def test_adzuna_marks_predicted_salaries(self):
         job = {"id": "1", "title": "DevOps", "salary_min": 100000, "salary_max": 120000,
                "salary_is_predicted": "1", "location": {"display_name": "Bern"}}  # fmt: skip

@@ -16,7 +16,7 @@ from typing import Any, Callable, Iterable, Iterator, Mapping
 from jobpipe import salary
 from jobpipe.bronze import read_records
 
-SOURCES = ("greenhouse", "lever", "ashby", "adzuna", "hn")
+SOURCES = ("greenhouse", "lever", "ashby", "smartrecruiters", "workable", "recruitee", "personio", "adzuna", "hn")
 
 
 @dataclass(frozen=True)
@@ -77,6 +77,54 @@ def _ashby(record: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _smartrecruiters(record: Mapping[str, Any]) -> dict[str, Any]:
+    job = record["payload"]["job"]
+    sections = ((job.get("jobAd") or {}).get("sections") or {}).values()
+    return {
+        "title": job.get("name"),
+        "company": (job.get("company") or {}).get("name") or record["payload"].get("board"),
+        "location": (job.get("location") or {}).get("fullLocation"),
+        "country": (job.get("location") or {}).get("country"),
+        "url": job.get("postingUrl") or f"https://jobs.smartrecruiters.com/{record['payload'].get('board')}/{job.get('id')}",
+        "description": " ".join(s.get("text") or "" for s in sections if isinstance(s, dict)),
+    }  # fmt: skip
+
+
+def _workable(record: Mapping[str, Any]) -> dict[str, Any]:
+    job = record["payload"]["job"]
+    return {
+        "title": job.get("title"),
+        "company": record["payload"].get("board"),
+        "location": ", ".join(filter(None, [job.get("city"), job.get("country")])) or None,
+        "country": next((loc.get("countryCode") for loc in job.get("locations") or []), None) or job.get("country"),
+        "url": job.get("url"),
+        "description": job.get("description"),
+    }
+
+
+def _recruitee(record: Mapping[str, Any]) -> dict[str, Any]:
+    job = record["payload"]["job"]
+    return {
+        "title": job.get("title"),
+        "company": job.get("company_name") or record["payload"].get("board"),
+        "location": job.get("location"),
+        "country": job.get("country_code"),
+        "url": job.get("careers_url"),
+        "description": " ".join(filter(None, [job.get("description"), job.get("requirements")])),
+    }
+
+
+def _personio(record: Mapping[str, Any]) -> dict[str, Any]:
+    job = record["payload"]["job"]
+    return {
+        "title": job.get("name"),
+        "company": job.get("subcompany") or record["payload"].get("board"),
+        "location": ", ".join(filter(None, [job.get("office"), *job.get("additionalOffices", [])])) or None,
+        "url": job.get("url"),
+        "description": " ".join(d.get("value") or "" for d in job.get("descriptions") or []),
+    }
+
+
 def _adzuna(record: Mapping[str, Any]) -> dict[str, Any]:
     job = record["payload"]["job"]
     return {
@@ -106,6 +154,10 @@ FIELDS: dict[str, Callable[[Mapping[str, Any]], dict[str, Any]]] = {
     "greenhouse": _greenhouse,
     "lever": _lever,
     "ashby": _ashby,
+    "smartrecruiters": _smartrecruiters,
+    "workable": _workable,
+    "recruitee": _recruitee,
+    "personio": _personio,
     "adzuna": _adzuna,
     "hn": _hn,
 }

@@ -18,12 +18,13 @@ sources.
 Only APIs intended for third parties are used. LinkedIn and jobs.ch are
 excluded because their terms forbid automated collection. See
 [ADR 0001](docs/adr/0001-data-sources.md) and
-[ADR 0003](docs/adr/0003-geographic-scope-and-excluded-sources.md).
+[ADR 0003](docs/adr/0003-geographic-scope-and-excluded-sources.md); the last
+four ATS were added in [ADR 0007](docs/adr/0007-more-ats-boards.md).
 
 | Source | What it adds | Auth |
 | --- | --- | --- |
 | HN "Ask HN: Who is hiring?" (Algolia API) | Monthly history back to 2011 | none |
-| Greenhouse, Lever and Ashby public job boards | Complete, first-hand postings from each employer | none |
+| Greenhouse, Lever, Ashby, SmartRecruiters, Workable, Recruitee and Personio public job boards | Complete, first-hand postings from each employer | none |
 | Adzuna | Broad coverage per country (ch, es, de, nl, ...), salary histograms | free key |
 | Levels.fyi Compensation API | Actual pay by role, location and experience | paid employer key, optional |
 

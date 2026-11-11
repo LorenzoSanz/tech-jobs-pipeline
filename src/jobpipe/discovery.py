@@ -1,7 +1,7 @@
 """Find public ATS boards of companies hiring in a region (Switzerland, Spain, Europe).
 
 The ATS endpoints read one company at a time and there is no public list of
-boards. HN postings often link to the company's Greenhouse, Lever or Ashby
+boards. HN postings often link to the company's ATS
 page, so the HN bronze data doubles as a discovery source. The output is a
 suggestion list to review by hand, not something applied automatically.
 """
@@ -44,6 +44,13 @@ BOARD_PATTERNS: dict[str, list[re.Pattern[str]]] = {
     ],
     "lever": [re.compile(r"(?<![.\w])jobs\.lever\.co/([A-Za-z0-9_.-]+)")],
     "ashby": [re.compile(r"(?<![.\w])jobs\.ashbyhq\.com/([A-Za-z0-9_.%-]+)")],
+    "smartrecruiters": [re.compile(r"(?<![.\w])(?:jobs|careers)\.smartrecruiters\.com/([A-Za-z0-9_-]+)")],
+    "workable": [
+        re.compile(r"(?<![.\w])apply\.workable\.com/(?!j/|api/)([A-Za-z0-9_-]+)"),
+        re.compile(r"(?<![.\w])(?!apply\.|www\.|jobs\.)([a-z0-9-]+)\.workable\.com"),
+    ],
+    "recruitee": [re.compile(r"(?<![.\w])(?!www\.)([a-z0-9-]+)\.recruitee\.com")],
+    "personio": [re.compile(r"(?<![.\w])([a-z0-9-]+)\.jobs\.personio\.(?:de|com)")],
 }
 
 

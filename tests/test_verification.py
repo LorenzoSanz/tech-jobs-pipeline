@@ -25,6 +25,13 @@ class JobLocationsTest(unittest.TestCase):
             job_locations("ashby", {"location": "Berlin", "secondaryLocations": [{"location": "Zug"}]}),
             ["Berlin", "Zug"],
         )
+        self.assertEqual(job_locations("smartrecruiters", {"location": {"fullLocation": "Bern, BE", "country": "ch"}}),
+                         ["Bern, BE", "Switzerland"])  # fmt: skip
+        self.assertEqual(job_locations("workable", {"city": "Tallinn", "country": "Estonia", "locations": []}),
+                         ["Tallinn", "Estonia"])  # fmt: skip
+        self.assertEqual(job_locations("recruitee", {"location": "Utrecht", "locations": [{"country": "Spain"}]}),
+                         ["Utrecht", "Spain"])  # fmt: skip
+        self.assertEqual(job_locations("personio", {"office": "Zug", "additionalOffices": ["Remote"]}), ["Zug", "Remote"])
 
 
 class VerifyTest(unittest.TestCase):
