@@ -19,7 +19,8 @@ Only APIs intended for third parties are used. LinkedIn and jobs.ch are
 excluded because their terms forbid automated collection. See
 [ADR 0001](docs/adr/0001-data-sources.md) and
 [ADR 0003](docs/adr/0003-geographic-scope-and-excluded-sources.md); the last
-four ATS were added in [ADR 0007](docs/adr/0007-more-ats-boards.md).
+four ATS were added in [ADR 0007](docs/adr/0007-more-ats-boards.md) and the
+boards of big tech companies in [ADR 0009](docs/adr/0009-big-tech-employers.md).
 
 | Source | What it adds | Auth |
 | --- | --- | --- |
@@ -111,7 +112,10 @@ Big tech employers are recognised whatever name they publish under
 ("Google Switzerland GmbH", "Amazon Web Services EMEA SARL"), see
 `src/jobpipe/employers.py`. FAANG career sites have no public API and Amazon's
 terms forbid automated access, so their postings come from Adzuna and HN only
-([ADR 0009](docs/adr/0009-big-tech-employers.md)).
+([ADR 0009](docs/adr/0009-big-tech-employers.md)). Many other big tech
+companies publish on public boards and are collected directly: Databricks,
+OpenAI, Anthropic, Snowflake, Spotify, Airbnb, LinkedIn, ServiceNow, Wise and
+about 35 more, all in `config/boards.toml`.
 
 Each posting's technologies are found in its title and description
 (`src/jobpipe/tech.py`). The match is the share of them you know; the feed

@@ -16,6 +16,9 @@ class EmployerTest(unittest.TestCase):
             "Stripe, Inc.": Employer("Stripe", "big_tech"),
             "Booking.com": Employer("Booking.com", "big_tech"),
             "Wise Payments Ltd": Employer("Wise", "big_tech"),
+            "hubspotjobs": Employer("HubSpot", "big_tech"),  # board slugs that are not the name
+            "traderepublicbank": Employer("Trade Republic", "big_tech"),
+            "Trade Republic Bank GmbH": Employer("Trade Republic", "big_tech"),
         }
         for company, expected in cases.items():
             with self.subTest(company=company):

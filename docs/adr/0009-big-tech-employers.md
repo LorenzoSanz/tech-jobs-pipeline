@@ -42,8 +42,14 @@ by tier, and a Big tech section in the market dashboard; the profile and
    hand with a `jobpipe watch` command, next on the roadmap. The tool will
    store the user's notes; it never fetches those sites.
 
-Big tech companies on Greenhouse, Lever or Ashby are collected like any
-other board.
+Big tech companies on Greenhouse, Lever, Ashby, SmartRecruiters or Workable
+are collected like any other board. About 150 candidate boards were checked
+with `verify-boards` on 2026-11-11 and 44 kept, those that answer and have
+open jobs in Switzerland, Spain or the rest of Europe: Databricks (166 of 916
+open jobs in the region), Wise, Anthropic, OpenAI, ServiceNow, Snowflake,
+HubSpot, Spotify, Waymo, Airbnb, LinkedIn and others. Boards whose slug is not
+the company name (`hubspotjobs`, `traderepublicbank`) get an alias in
+`employers.py`, so they land in the right tier.
 
 ## Consequences
 

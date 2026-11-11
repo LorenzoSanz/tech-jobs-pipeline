@@ -55,6 +55,32 @@ boards = [
   "materiom",  # 2/2
   "twilio",  # 2/129
   "typeform",  # 2/6
+  # Big tech and top-paying tech, verified on 2026-11-11 (ADR 0009).
+  "databricks",  # 166/916
+  "anthropic",  # 84/676
+  "hubspotjobs",  # 73/127
+  "intercom",  # 72/111
+  "waymo",  # 43/382
+  "traderepublicbank",  # 42/42
+  "airbnb",  # 40/211
+  "toast",  # 32/341
+  "figma",  # 31/142
+  "asana",  # 25/109
+  "affirm",  # 24/207
+  "algolia",  # 20/27
+  "scaleai",  # 19/169
+  "samsara",  # 14/313
+  "pinterest",  # 13/165
+  "vercel",  # 12/87
+  "reddit",  # 10/159
+  "robinhood",  # 8/156
+  "mozilla",  # 6/115
+  "squarespace",  # 4/21
+  "duolingo",  # 3/61
+  "dataiku",  # 2/15
+  "doordashusa",  # 2/443
+  "realtimeboardglobal",  # 2/15
+  "roblox",  # 2/276
 ]
 
 [lever]
@@ -68,6 +94,9 @@ boards = [
   "swissborg",  # 10/10
   "justwatch",  # 4/11
   "rai",  # 4/5
+  # Big tech and top-paying tech, verified on 2026-11-11 (ADR 0009).
+  "spotify",  # 46/86
+  "contentsquare",  # 12/29
 ]
 
 [ashby]
@@ -138,6 +167,20 @@ boards = [
   "speckle",  # 1/2
   "triggerdev",  # 1/6
   "upflow",  # 1/1
+  # Big tech and top-paying tech, verified on 2026-11-11 (ADR 0009).
+  "openai",  # 83/824
+  "snowflake",  # 78/380
+  "harvey",  # 73/380
+  "qonto",  # 53/60
+  "notion",  # 44/156
+  "perplexity",  # 25/138
+  "vanta",  # 23/81
+  "benchling",  # 12/52
+  "ramp",  # 12/176
+  "plaid",  # 9/143
+  "cursor",  # 4/116
+  "zapier",  # 3/9
+  "replit",  # 2/31
 ]
 
 # Verified on 2026-11-11 from a list of Swiss and Spanish companies.
@@ -150,6 +193,10 @@ boards = [
   "swissquote",  # 28/35
   "nexthink",  # 24/65
   "caravelo",  # 1/1
+  # Big tech and top-paying tech, verified on 2026-11-11 (ADR 0009).
+  "Wise",  # 208/441
+  "ServiceNow",  # 83/786
+  "LinkedIn3",  # 34/199, LinkedIn's account
 ]
 
 [workable]
@@ -159,6 +206,8 @@ boards = [
   "crypto-finance",  # 6/6
   "distalmotion",  # 5/25
   "codurance",  # 4/17
+  # Big tech and top-paying tech, verified on 2026-11-11 (ADR 0009).
+  "huggingface",  # 2/6
 ]
 
 [recruitee]

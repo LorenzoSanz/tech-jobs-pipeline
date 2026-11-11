@@ -48,12 +48,15 @@ EMPLOYERS: dict[str, tuple[str, ...]] = {
         "Microsoft",
     ),
     BIG_TECH.key: (
-        "Adobe", "Adyen", "Airbnb", "AMD", "Anthropic", "Atlassian", "Bloomberg", "Booking.com|Booking",
+        "Adobe", "Adyen", "Airbnb", "AMD", "Anthropic", "Asana", "Atlassian", "Bloomberg", "Booking.com|Booking",
         "ByteDance|TikTok", "Canonical", "Cisco", "Cloudflare", "Coinbase", "Databricks", "Datadog",
-        "Dropbox", "Elastic", "GitHub", "GitLab", "IBM", "Intel", "Klarna", "LinkedIn", "MongoDB",
-        "Nvidia", "Okta", "OpenAI", "Oracle", "Palantir|Palantir Technologies", "Pinterest", "Qualcomm",
-        "Revolut", "Salesforce", "SAP", "ServiceNow", "Shopify", "Snowflake", "Spotify", "Stripe", "Twilio",
-        "Uber", "Wise|Wise Payments", "Workday", "xAI", "Zalando",
+        "DoorDash|doordashusa", "Dropbox", "Duolingo", "Elastic", "Figma", "GitHub", "GitLab",
+        "HubSpot|hubspotjobs", "Hugging Face|huggingface", "IBM", "Intel", "Klarna", "LinkedIn", "MongoDB",
+        "Notion|Notion Labs", "Nvidia", "Okta", "OpenAI", "Oracle", "Palantir|Palantir Technologies",
+        "Perplexity|Perplexity AI", "Pinterest", "Plaid", "Qualcomm", "Reddit", "Revolut", "Robinhood", "Roblox",
+        "Salesforce", "Samsara", "SAP", "Scale AI|scaleai", "ServiceNow", "Shopify", "Snowflake", "Spotify",
+        "Stripe", "Trade Republic|traderepublicbank|Trade Republic Bank", "Twilio", "Uber", "Waymo",
+        "Wise|Wise Payments", "Workday", "xAI", "Zalando",
     ),
 }  # fmt: skip
 
