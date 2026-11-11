@@ -185,7 +185,7 @@ to local-only values; copy `.env.example` to `.env` to change them.
 ## Development
 
 ```bash
-pip install -e .[dev]    # ruff, mypy and hypothesis, pinned
+pip install -e .[dev,db] # ruff, mypy and hypothesis pinned; psycopg for the type checks
 ruff check src tests grafana benchmarks
 mypy                     # --strict, configured in pyproject.toml
 PYTHONPATH=src python -m unittest discover -s tests -t .
