@@ -1,4 +1,4 @@
-"""Command line entry point: ``jobpipe ingest <source>`` and ``jobpipe discover-boards``.
+"""Command line entry point: ``jobpipe ingest <source>``, board discovery and ``salaries``.
 
 Logs go to stderr; one JSON summary line per bronze write goes to stdout, so a
 scheduler can parse the result of each run.
@@ -10,6 +10,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
 import tomllib
 from datetime import date
@@ -19,7 +20,8 @@ from typing import Sequence
 from jobpipe.bronze import BronzeWriter, WriteResult, read_records
 from jobpipe.discovery import REGION_KEYWORDS, discover_from_hn, location_pattern
 from jobpipe.http import HttpClient, HttpError
-from jobpipe.sources import adzuna, ats, hn
+from jobpipe import salary
+from jobpipe.sources import adzuna, ats, hn, levelsfyi
 from jobpipe.verification import render_toml, verify
 
 DEFAULT_DATA_DIR = Path(os.environ.get("JOBPIPE_DATA_DIR", "data/bronze"))
@@ -64,13 +66,19 @@ def _ingest_ats(args: argparse.Namespace, http: HttpClient, writer: BronzeWriter
     return 1 if failed == attempted else 0
 
 
-def _ingest_adzuna(args: argparse.Namespace, http: HttpClient, writer: BronzeWriter) -> int:
+def _adzuna_credentials() -> adzuna.AdzunaCredentials | None:
     app_id = os.environ.get("ADZUNA_APP_ID")
     app_key = os.environ.get("ADZUNA_APP_KEY")
     if not app_id or not app_key:
         logging.error("set ADZUNA_APP_ID and ADZUNA_APP_KEY (free key at developer.adzuna.com)")
+        return None
+    return adzuna.AdzunaCredentials(app_id, app_key)
+
+
+def _ingest_adzuna(args: argparse.Namespace, http: HttpClient, writer: BronzeWriter) -> int:
+    credentials = _adzuna_credentials()
+    if credentials is None:
         return 2
-    credentials = adzuna.AdzunaCredentials(app_id, app_key)
     countries = args.country or ["ch"]
     failed = 0
     for country in countries:
@@ -89,6 +97,91 @@ def _ingest_adzuna(args: argparse.Namespace, http: HttpClient, writer: BronzeWri
             continue
         print(_summary(result, country=country))
     return 1 if failed == len(countries) else 0
+
+
+def _ingest_adzuna_salaries(args: argparse.Namespace, http: HttpClient, writer: BronzeWriter) -> int:
+    credentials = _adzuna_credentials()
+    if credentials is None:
+        return 2
+    countries = args.country or ["ch"]
+    searches = args.what or [None]
+    queries = [
+        adzuna.SalaryQuery(
+            country=country,
+            what=what,
+            category=args.category or None,
+            history_months=args.history_months if index == 0 else 0,
+        )
+        for country in countries
+        for index, what in enumerate(searches)
+    ]
+    failed = 0
+    for query in queries:
+        try:
+            result = writer.write(adzuna.SALARY_SOURCE, adzuna.salary_benchmarks(http, credentials, query))
+        except HttpError as error:
+            logging.error("adzuna salaries %s %r failed: %s", query.country, query.what, error)
+            failed += 1
+            continue
+        print(_summary(result, country=query.country, what=query.what))
+    return 1 if failed == len(queries) else 0
+
+
+def _levelsfyi_key() -> str | None:
+    key = os.environ.get("LEVELS_FYI_API_KEY")
+    if not key:
+        logging.error(
+            "set LEVELS_FYI_API_KEY (employer key: levels.fyi/api-access). Without one, look up "
+            "Levels.fyi by hand or through its free MCP server; scraping the site breaks its terms."
+        )
+    return key
+
+
+def _ingest_levelsfyi(args: argparse.Namespace, http: HttpClient, writer: BronzeWriter) -> int:
+    key = _levelsfyi_key()
+    if key is None:
+        return 2
+    query = levelsfyi.BenchmarkQuery(
+        job_family=args.job_family,
+        locations=tuple(args.location),
+        salary_type=args.salary_type,
+        time_range=args.time_range,
+        focus_tags=tuple(args.focus_tag or ()),
+    )
+    result = writer.write(levelsfyi.SOURCE, levelsfyi.benchmarks(http, key, query))
+    print(_summary(result, job_family=query.job_family, locations=list(query.locations)))
+    return 0
+
+
+def _levelsfyi_lookup(args: argparse.Namespace, http: HttpClient) -> int:
+    key = _levelsfyi_key()
+    if key is None:
+        return 2
+    print(json.dumps(levelsfyi.lookup(http, key, args.kind, args.text), indent=2, ensure_ascii=False))
+    return 0
+
+
+def _salaries(args: argparse.Namespace) -> int:
+    title = re.compile(args.title, re.IGNORECASE) if args.title else None
+    postings = salary.filter_salaries(
+        salary.posted_salaries(args.data_dir, args.source or list(salary.EXTRACTORS)),
+        regions=args.region or (),
+        title=title,
+        include_predicted=args.include_predicted,
+    )
+    summary = salary.summarise(postings)
+    histograms = salary.benchmark_records(args.data_dir, adzuna.SALARY_SOURCE)
+    levels = salary.benchmark_records(args.data_dir, levelsfyi.SOURCE)
+    if args.format == "json":
+        report = {
+            "postings": summary,
+            "adzuna": [record["payload"] for record in histograms],
+            "levelsfyi": [record["payload"] for record in levels],
+        }
+        print(json.dumps(salary.to_jsonable(report), indent=2, ensure_ascii=False))
+    else:
+        sys.stdout.write(salary.render_text(summary, histograms, levels))
+    return 0
 
 
 def _discover_boards(args: argparse.Namespace) -> int:
@@ -151,6 +244,60 @@ def build_parser() -> argparse.ArgumentParser:
     adzuna_parser.add_argument("--max-pages", type=int, default=20)
     adzuna_parser.set_defaults(handler=_ingest_adzuna)
 
+    adzuna_salary_parser = sources.add_parser(
+        "adzuna-salaries", help="Adzuna salary histogram per search, and category trend (free key)"
+    )
+    adzuna_salary_parser.add_argument("--country", action="append", help="repeatable; default: ch")
+    adzuna_salary_parser.add_argument(
+        "--what", action="append", help="repeatable search, e.g. --what 'data engineer'"
+    )
+    adzuna_salary_parser.add_argument("--category", default="it-jobs")
+    adzuna_salary_parser.add_argument("--history-months", type=int, default=12)
+    adzuna_salary_parser.set_defaults(handler=_ingest_adzuna_salaries)
+
+    levels_parser = sources.add_parser(
+        "levelsfyi", help="Levels.fyi Compensation API benchmarks (needs LEVELS_FYI_API_KEY)"
+    )
+    levels_parser.add_argument("--job-family", default="software-engineer")
+    levels_parser.add_argument(
+        "--location",
+        action="append",
+        required=True,
+        help="Levels.fyi location slug, repeatable (find it: jobpipe levelsfyi-lookup locations zurich)",
+    )
+    levels_parser.add_argument(
+        "--salary-type",
+        default="total_compensation",
+        choices=["total_compensation", "base_salary", "total_cash"],
+    )
+    levels_parser.add_argument("--time-range", default="0-12", help="months back: 0-12, 0-24, ...")
+    levels_parser.add_argument("--focus-tag", action="append", help="repeatable, e.g. backend")
+    levels_parser.set_defaults(handler=_ingest_levelsfyi)
+
+    lookup = commands.add_parser(
+        "levelsfyi-lookup", help="find Levels.fyi slugs (needs LEVELS_FYI_API_KEY)"
+    )
+    lookup.add_argument(
+        "kind", choices=["locations", "job-families", "focus-tags", "titles", "companies"]
+    )
+    lookup.add_argument("text")
+
+    report = commands.add_parser("salaries", help="salary report from collected data, for negotiating")
+    report.add_argument(
+        "--region",
+        action="append",
+        choices=sorted(salary.REGION_PATTERNS),
+        help="repeatable: --region ch --region es (default: everywhere)",
+    )
+    report.add_argument("--title", help="regex on the job title, e.g. 'data|backend'")
+    report.add_argument("--source", action="append", choices=sorted(salary.EXTRACTORS))
+    report.add_argument(
+        "--include-predicted",
+        action="store_true",
+        help="include salaries Adzuna estimated instead of the employer stating them",
+    )
+    report.add_argument("--format", choices=["text", "json"], default="text")
+
     discover = commands.add_parser("discover-boards", help="suggest ATS boards from collected HN data")
     discover.add_argument("--min-count", type=int, default=1)
     discover.add_argument(
@@ -187,6 +334,10 @@ def main(argv: Sequence[str] | None = None, http: HttpClient | None = None) -> i
     )
     if args.command == "discover-boards":
         return _discover_boards(args)
+    if args.command == "salaries":
+        return _salaries(args)
+    if args.command == "levelsfyi-lookup":
+        return _levelsfyi_lookup(args, http or HttpClient())
     if args.command == "verify-boards":
         return _verify_boards(args, http or HttpClient())
     return args.handler(args, http or HttpClient(), BronzeWriter(args.data_dir))

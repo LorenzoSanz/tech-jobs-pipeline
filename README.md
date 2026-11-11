@@ -24,7 +24,12 @@ excluded because their terms forbid automated collection. See
 | --- | --- | --- |
 | HN "Ask HN: Who is hiring?" (Algolia API) | Monthly history back to 2011 | none |
 | Greenhouse, Lever and Ashby public job boards | Complete, first-hand postings from each employer | none |
-| Adzuna | Broad coverage per country (ch, es, de, nl, ...) | free key |
+| Adzuna | Broad coverage per country (ch, es, de, nl, ...), salary histograms | free key |
+| Levels.fyi Compensation API | Actual pay by role, location and experience | paid employer key, optional |
+
+Levels.fyi is used only through its official API: its terms forbid automated
+collection of the site, public pages included. See
+[ADR 0004](docs/adr/0004-salary-sources.md).
 
 ## Architecture
 
@@ -63,6 +68,28 @@ jobpipe ingest adzuna --country ch --country es --country de --max-days-old 1
 Data lands in `data/bronze/source=<source>/ingest_date=<date>/run=<id>.jsonl`.
 Every command prints one JSON summary line per file written.
 
+### Salaries, for negotiating
+
+```bash
+# Salary distribution of current postings for your searches, per country (Adzuna key)
+jobpipe ingest adzuna-salaries --country ch --country es --what "data engineer" --what "backend"
+
+# Optional: Levels.fyi benchmarks, only with an official API key
+export LEVELS_FYI_API_KEY=...
+jobpipe levelsfyi-lookup locations zurich          # find the location slug
+jobpipe ingest levelsfyi --job-family software-engineer --location <slug> --focus-tag backend
+
+# Report: posted ranges per currency (p25 / median / p75), best-paying postings
+# with links, Adzuna histograms and Levels.fyi benchmarks
+jobpipe salaries --region ch --title "data|backend"
+jobpipe salaries --region es --region eu --format json > salaries.json
+```
+
+Posted ranges come from Ashby, Lever, Greenhouse, Adzuna and HN postings already
+collected. Currencies are never mixed; Adzuna's estimated salaries are left out
+unless `--include-predicted` is given. Without a Levels.fyi key, check
+levels.fyi by hand or through its free MCP server from an AI assistant.
+
 ## Development
 
 ```bash
@@ -78,10 +105,12 @@ CI checks every PR. Decisions that are hard to reverse get an ADR in `docs/adr/`
 2. **Scheduling** — daily CronJobs on a local k3d cluster; HN monthly.
 3. **Streaming** — collectors publish to Apache Kafka (Strimzi); bronze becomes a consumer.
 4. **Silver** — deduplication across sources, first_seen/last_seen, location and seniority normalisation.
-5. **Gold** — technology extraction and monthly demand, salary ranges by role.
+5. **Gold** — technology extraction and monthly demand, salary ranges by role
+   (a first salary report from bronze exists: `jobpipe salaries`).
 6. **Observability** — run metrics and alerts when a source returns nothing.
 
 ## Data and attribution
 
-Collected data is not committed. Adzuna data shown publicly must credit Adzuna.
+Collected data is not committed. Adzuna data shown publicly must credit Adzuna;
+Levels.fyi data must say "Data source: Levels.fyi (https://www.levels.fyi)".
 Postings belong to their publishers; only aggregated statistics are published.

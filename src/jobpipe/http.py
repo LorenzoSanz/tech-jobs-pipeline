@@ -88,7 +88,7 @@ class HttpClient:
         params: Mapping[str, Any] | None = None,
         headers: Mapping[str, str] | None = None,
     ) -> bytes:
-        full_url = f"{url}?{urllib.parse.urlencode(params)}" if params else url
+        full_url = f"{url}?{urllib.parse.urlencode(params, doseq=True)}" if params else url
         safe_url = _without_query(full_url)
         host = urllib.parse.urlsplit(full_url).netloc
         request_headers = {
