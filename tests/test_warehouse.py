@@ -149,6 +149,7 @@ def panel_sql(dashboard: dict) -> list[tuple[str, str]]:
     queries += [(f"variable {v['name']}", v["query"]) for v in dashboard["templating"]["list"] if v["type"] == "query"]
     values = {
         "region": "'ch','es','eu','other'", "currency:sqlstring": "'CHF'", "role": "'__all'", "seniority": "'__all'",
+        "tier": "'faang','big_tech','other'",
         "company": "'Acme','acme'", "predicted:raw": "false", "offer:sqlstring": "'100000'",
         "adzuna:sqlstring": "'ch | data engineer'", "with_salary:raw": "true", "technology": "'python','dbt'",
         "min_match:raw": "0", "new:raw": "36500",

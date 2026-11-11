@@ -66,6 +66,44 @@
         }
       },
       {
+        "type": "custom",
+        "name": "tier",
+        "label": "Tipo de empresa",
+        "description": "FAANG + Microsoft, otras big tech o el resto. Ver src/jobpipe/employers.py.",
+        "multi": true,
+        "includeAll": false,
+        "query": "FAANG + Microsoft : faang,Big tech : big_tech,Otras empresas : other",
+        "options": [
+          {
+            "text": "FAANG + Microsoft",
+            "value": "faang",
+            "selected": true
+          },
+          {
+            "text": "Big tech",
+            "value": "big_tech",
+            "selected": true
+          },
+          {
+            "text": "Otras empresas",
+            "value": "other",
+            "selected": true
+          }
+        ],
+        "current": {
+          "text": [
+            "FAANG + Microsoft",
+            "Big tech",
+            "Otras empresas"
+          ],
+          "value": [
+            "faang",
+            "big_tech",
+            "other"
+          ]
+        }
+      },
+      {
         "type": "query",
         "name": "role",
         "label": "Rol",
@@ -257,7 +295,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT count(*) FROM gold.jobs WHERE last_seen > now() - interval '7 days' AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company))"
+          "rawSql": "SELECT count(*) FROM gold.jobs WHERE last_seen > now() - interval '7 days' AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company))"
         }
       ],
       "options": {
@@ -324,7 +362,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT count(*) FROM gold.jobs WHERE posted_at > now() - interval '30 days' AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company))"
+          "rawSql": "SELECT count(*) FROM gold.jobs WHERE posted_at > now() - interval '30 days' AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company))"
         }
       ],
       "options": {
@@ -391,7 +429,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT count(DISTINCT lower(company)) FROM gold.jobs WHERE last_seen > now() - interval '90 days' AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company))"
+          "rawSql": "SELECT count(DISTINCT lower(company)) FROM gold.jobs WHERE last_seen > now() - interval '90 days' AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company))"
         }
       ],
       "options": {
@@ -458,7 +496,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT 100.0 * count(*) FILTER (WHERE EXISTS (SELECT 1 FROM gold.salaries s WHERE s.job_id = p.job_id AND NOT s.predicted)) / nullif(count(*), 0) FROM gold.jobs p WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company))"
+          "rawSql": "SELECT 100.0 * count(*) FILTER (WHERE EXISTS (SELECT 1 FROM gold.salaries s WHERE s.job_id = p.job_id AND NOT s.predicted)) / nullif(count(*), 0) FROM gold.jobs p WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company))"
         }
       ],
       "options": {
@@ -538,7 +576,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT month::timestamptz AS time, CASE region WHEN 'ch' THEN 'Suiza' WHEN 'es' THEN 'España' WHEN 'eu' THEN 'Resto de Europa' WHEN 'other' THEN 'Otras / sin región' ELSE region END AS metric, sum(postings) AS value\nFROM gold.postings_monthly\nWHERE $__timeFilter(month::timestamptz) AND region IN ($region) AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\nGROUP BY 1, region ORDER BY 1"
+          "rawSql": "SELECT month::timestamptz AS time, CASE region WHEN 'ch' THEN 'Suiza' WHEN 'es' THEN 'España' WHEN 'eu' THEN 'Resto de Europa' WHEN 'other' THEN 'Otras / sin región' ELSE region END AS metric, sum(postings) AS value\nFROM gold.postings_monthly\nWHERE $__timeFilter(month::timestamptz) AND region IN ($region) AND company_tier IN ($tier) AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\nGROUP BY 1, region ORDER BY 1"
         }
       ],
       "options": {
@@ -671,7 +709,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT company AS \"Empresa\", count(*) AS \"Ofertas\",\n       to_char(max(posted_at), 'YYYY-MM-DD') AS \"Última\"\nFROM gold.jobs\nWHERE company IS NOT NULL AND last_seen > now() - interval '90 days' AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company))\nGROUP BY 1 ORDER BY 2 DESC LIMIT 50"
+          "rawSql": "SELECT company AS \"Empresa\", count(*) AS \"Ofertas\",\n       to_char(max(posted_at), 'YYYY-MM-DD') AS \"Última\"\nFROM gold.jobs\nWHERE company IS NOT NULL AND last_seen > now() - interval '90 days' AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company))\nGROUP BY 1 ORDER BY 2 DESC LIMIT 50"
         }
       ],
       "options": {
@@ -758,7 +796,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT CASE role WHEN 'product' THEN 'Producto y diseño' WHEN 'eng_management' THEN 'Gestión técnica' WHEN 'ml' THEN 'ML / IA' WHEN 'data' THEN 'Datos' WHEN 'devops' THEN 'DevOps / SRE / Plataforma' WHEN 'security' THEN 'Seguridad' WHEN 'mobile' THEN 'Móvil' WHEN 'qa' THEN 'QA / Test' WHEN 'embedded' THEN 'Embebido / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Ingeniería (general)' WHEN 'other' THEN 'Otros (no técnicos)' ELSE role END AS \"Rol\", count(*) AS \"Ofertas\"\nFROM gold.jobs\nWHERE last_seen > now() - interval '90 days' AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company))\nGROUP BY role ORDER BY 2 DESC"
+          "rawSql": "SELECT CASE role WHEN 'product' THEN 'Producto y diseño' WHEN 'eng_management' THEN 'Gestión técnica' WHEN 'ml' THEN 'ML / IA' WHEN 'data' THEN 'Datos' WHEN 'devops' THEN 'DevOps / SRE / Plataforma' WHEN 'security' THEN 'Seguridad' WHEN 'mobile' THEN 'Móvil' WHEN 'qa' THEN 'QA / Test' WHEN 'embedded' THEN 'Embebido / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Ingeniería (general)' WHEN 'other' THEN 'Otros (no técnicos)' ELSE role END AS \"Rol\", count(*) AS \"Ofertas\"\nFROM gold.jobs\nWHERE last_seen > now() - interval '90 days' AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company))\nGROUP BY role ORDER BY 2 DESC"
         }
       ],
       "options": {
@@ -818,7 +856,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT CASE seniority WHEN 'intern' THEN 'Prácticas / becario' WHEN 'head' THEN 'Head / dirección' WHEN 'lead' THEN 'Lead / staff / principal' WHEN 'senior' THEN 'Senior' WHEN 'junior' THEN 'Junior' WHEN 'mid' THEN 'Intermedio' WHEN 'unspecified' THEN 'Sin indicar' ELSE seniority END AS \"Nivel\", count(*) AS \"Ofertas\"\nFROM gold.jobs\nWHERE last_seen > now() - interval '90 days' AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company))\nGROUP BY seniority ORDER BY array_position(ARRAY['intern', 'head', 'lead', 'senior', 'junior', 'mid', 'unspecified'], seniority)"
+          "rawSql": "SELECT CASE seniority WHEN 'intern' THEN 'Prácticas / becario' WHEN 'head' THEN 'Head / dirección' WHEN 'lead' THEN 'Lead / staff / principal' WHEN 'senior' THEN 'Senior' WHEN 'junior' THEN 'Junior' WHEN 'mid' THEN 'Intermedio' WHEN 'unspecified' THEN 'Sin indicar' ELSE seniority END AS \"Nivel\", count(*) AS \"Ofertas\"\nFROM gold.jobs\nWHERE last_seen > now() - interval '90 days' AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company))\nGROUP BY seniority ORDER BY array_position(ARRAY['intern', 'head', 'lead', 'senior', 'junior', 'mid', 'unspecified'], seniority)"
         }
       ],
       "options": {
@@ -862,7 +900,7 @@
     },
     {
       "type": "row",
-      "title": "Tecnologías",
+      "title": "Big tech (ofertas abiertas)",
       "collapsed": false,
       "panels": [],
       "gridPos": {
@@ -872,6 +910,205 @@
         "h": 1
       },
       "id": 12
+    },
+    {
+      "type": "barchart",
+      "title": "Big tech con ofertas abiertas",
+      "description": "Se aplican los filtros de región, rol y nivel; el de empresa no. Las ofertas de FAANG llegan por Adzuna y HN, ver ADR 0009.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT employer AS \"Empresa\",\n       nullif(count(*) FILTER (WHERE company_tier = 'faang'), 0) AS \"FAANG + Microsoft\",\n       nullif(count(*) FILTER (WHERE company_tier = 'big_tech'), 0) AS \"Big tech\"\nFROM gold.jobs\nWHERE is_open AND company_tier <> 'other'\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\nGROUP BY employer ORDER BY count(*) DESC, 1 LIMIT 20"
+        }
+      ],
+      "options": {
+        "xField": "Empresa",
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "barWidth": 0.75,
+        "barRadius": 0.2,
+        "xTickLabelRotation": 0,
+        "tooltip": {
+          "mode": "multi"
+        },
+        "stacking": "normal"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "color": {
+            "mode": "continuous-BlPu"
+          },
+          "custom": {
+            "fillOpacity": 90,
+            "lineWidth": 0,
+            "gradientMode": "none"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FAANG + Microsoft"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A855F7"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Big tech"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3B82F6"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 12,
+        "h": 11
+      },
+      "id": 13
+    },
+    {
+      "type": "table",
+      "title": "Últimas ofertas de big tech · clic en el puesto para abrir la oferta",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT to_char(posted_at, 'YYYY-MM-DD') AS \"Publicada\", employer AS \"Empresa\",\n       title AS \"Puesto\", CASE seniority WHEN 'intern' THEN 'Prácticas / becario' WHEN 'head' THEN 'Head / dirección' WHEN 'lead' THEN 'Lead / staff / principal' WHEN 'senior' THEN 'Senior' WHEN 'junior' THEN 'Junior' WHEN 'mid' THEN 'Intermedio' WHEN 'unspecified' THEN 'Sin indicar' ELSE seniority END AS \"Nivel\",\n       place AS \"Lugar\", url\nFROM gold.jobs\nWHERE is_open AND company_tier <> 'other'\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\nORDER BY posted_at DESC NULLS LAST LIMIT 200"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "custom": {
+            "align": "auto",
+            "filterable": false,
+            "inspect": false,
+            "minWidth": 70
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Role|Rol"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Puesto"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Abrir oferta",
+                    "url": "${__data.fields.url}",
+                    "targetBlank": true
+                  }
+                ]
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 260
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "url"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 26,
+        "w": 12,
+        "h": 11
+      },
+      "id": 14
+    },
+    {
+      "type": "row",
+      "title": "Tecnologías",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 24,
+        "h": 1
+      },
+      "id": 15
     },
     {
       "type": "barchart",
@@ -891,7 +1128,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT t.label AS \"Tecnología\",\n       round(100.0 * count(*) / nullif((SELECT count(*) FROM gold.jobs\n                                         WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company)) AND $__timeFilter(posted_at)\n                                        ), 0), 1) AS \"Ofertas\"\nFROM gold.jobs p\nCROSS JOIN LATERAL unnest(p.technologies) AS u(key)\nJOIN silver.technologies t USING (key)\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company)) AND $__timeFilter(p.posted_at)\nGROUP BY t.label ORDER BY 2 DESC, 1 LIMIT 20"
+          "rawSql": "SELECT t.label AS \"Tecnología\",\n       round(100.0 * count(*) / nullif((SELECT count(*) FROM gold.jobs\n                                         WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company)) AND $__timeFilter(posted_at)\n                                        ), 0), 1) AS \"Ofertas\"\nFROM gold.jobs p\nCROSS JOIN LATERAL unnest(p.technologies) AS u(key)\nJOIN silver.technologies t USING (key)\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company)) AND $__timeFilter(p.posted_at)\nGROUP BY t.label ORDER BY 2 DESC, 1 LIMIT 20"
         }
       ],
       "options": {
@@ -928,11 +1165,11 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 26,
+        "y": 38,
         "w": 12,
         "h": 11
       },
-      "id": 13
+      "id": 16
     },
     {
       "type": "timeseries",
@@ -952,7 +1189,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT date_trunc('month', p.posted_at) AS time, t.label AS metric,\n       100.0 * count(*) FILTER (WHERE t.key = ANY(p.technologies)) / count(*) AS value\nFROM gold.jobs p\nCROSS JOIN silver.technologies t\nWHERE t.key IN ($technology) AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company)) AND $__timeFilter(p.posted_at)\nGROUP BY 1, 2 HAVING count(*) >= 10 ORDER BY 1"
+          "rawSql": "SELECT date_trunc('month', p.posted_at) AS time, t.label AS metric,\n       100.0 * count(*) FILTER (WHERE t.key = ANY(p.technologies)) / count(*) AS value\nFROM gold.jobs p\nCROSS JOIN silver.technologies t\nWHERE t.key IN ($technology) AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company)) AND $__timeFilter(p.posted_at)\nGROUP BY 1, 2 HAVING count(*) >= 10 ORDER BY 1"
         }
       ],
       "options": {
@@ -1047,11 +1284,11 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 26,
+        "y": 38,
         "w": 12,
         "h": 11
       },
-      "id": 14
+      "id": 17
     },
     {
       "type": "row",
@@ -1060,11 +1297,11 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 37,
+        "y": 49,
         "w": 24,
         "h": 1
       },
-      "id": 15
+      "id": 18
     },
     {
       "type": "table",
@@ -1084,7 +1321,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT to_char(p.posted_at, 'YYYY-MM-DD') AS \"Publicada\",\n       p.company AS \"Empresa\", p.title AS \"Puesto\", CASE role WHEN 'product' THEN 'Producto y diseño' WHEN 'eng_management' THEN 'Gestión técnica' WHEN 'ml' THEN 'ML / IA' WHEN 'data' THEN 'Datos' WHEN 'devops' THEN 'DevOps / SRE / Plataforma' WHEN 'security' THEN 'Seguridad' WHEN 'mobile' THEN 'Móvil' WHEN 'qa' THEN 'QA / Test' WHEN 'embedded' THEN 'Embebido / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Ingeniería (general)' WHEN 'other' THEN 'Otros (no técnicos)' ELSE role END AS \"Rol\",\n       CASE seniority WHEN 'intern' THEN 'Prácticas / becario' WHEN 'head' THEN 'Head / dirección' WHEN 'lead' THEN 'Lead / staff / principal' WHEN 'senior' THEN 'Senior' WHEN 'junior' THEN 'Junior' WHEN 'mid' THEN 'Intermedio' WHEN 'unspecified' THEN 'Sin indicar' ELSE seniority END AS \"Nivel\", p.place AS \"Lugar\", (SELECT string_agg(CASE region WHEN 'ch' THEN 'Suiza' WHEN 'es' THEN 'España' WHEN 'eu' THEN 'Resto de Europa' WHEN 'other' THEN 'Otras / sin región' ELSE region END, ', ') FROM unnest(p.regions) AS r(region)) AS \"Región\",\n       (SELECT string_agg(s.currency || ' ' || round(s.min_annual / 1000) || 'k–' || round(s.max_annual / 1000) || 'k', ' / ')\n          FROM gold.salaries s\n         WHERE s.job_id = p.job_id AND NOT s.predicted) AS \"Salario\",\n       array_to_string(p.sources, ', ') AS \"Fuente\", p.url\nFROM gold.jobs p\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company))\n  AND $__timeFilter(p.posted_at)\n  AND (NOT ${with_salary:raw} OR EXISTS (SELECT 1 FROM gold.salaries s WHERE s.job_id = p.job_id AND NOT s.predicted))\nORDER BY 1 DESC NULLS LAST LIMIT 500"
+          "rawSql": "SELECT to_char(p.posted_at, 'YYYY-MM-DD') AS \"Publicada\",\n       coalesce(p.employer, p.company) AS \"Empresa\", p.title AS \"Puesto\", CASE role WHEN 'product' THEN 'Producto y diseño' WHEN 'eng_management' THEN 'Gestión técnica' WHEN 'ml' THEN 'ML / IA' WHEN 'data' THEN 'Datos' WHEN 'devops' THEN 'DevOps / SRE / Plataforma' WHEN 'security' THEN 'Seguridad' WHEN 'mobile' THEN 'Móvil' WHEN 'qa' THEN 'QA / Test' WHEN 'embedded' THEN 'Embebido / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Ingeniería (general)' WHEN 'other' THEN 'Otros (no técnicos)' ELSE role END AS \"Rol\",\n       CASE seniority WHEN 'intern' THEN 'Prácticas / becario' WHEN 'head' THEN 'Head / dirección' WHEN 'lead' THEN 'Lead / staff / principal' WHEN 'senior' THEN 'Senior' WHEN 'junior' THEN 'Junior' WHEN 'mid' THEN 'Intermedio' WHEN 'unspecified' THEN 'Sin indicar' ELSE seniority END AS \"Nivel\", p.place AS \"Lugar\", (SELECT string_agg(CASE region WHEN 'ch' THEN 'Suiza' WHEN 'es' THEN 'España' WHEN 'eu' THEN 'Resto de Europa' WHEN 'other' THEN 'Otras / sin región' ELSE region END, ', ') FROM unnest(p.regions) AS r(region)) AS \"Región\",\n       (SELECT string_agg(s.currency || ' ' || round(s.min_annual / 1000) || 'k–' || round(s.max_annual / 1000) || 'k', ' / ')\n          FROM gold.salaries s\n         WHERE s.job_id = p.job_id AND NOT s.predicted) AS \"Salario\",\n       array_to_string(p.sources, ', ') AS \"Fuente\", p.url\nFROM gold.jobs p\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND ('__all' IN ($company) OR company IN ($company))\n  AND $__timeFilter(p.posted_at)\n  AND (NOT ${with_salary:raw} OR EXISTS (SELECT 1 FROM gold.salaries s WHERE s.job_id = p.job_id AND NOT s.predicted))\nORDER BY 1 DESC NULLS LAST LIMIT 500"
         }
       ],
       "options": {
@@ -1155,11 +1392,11 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 38,
+        "y": 50,
         "w": 24,
         "h": 16
       },
-      "id": 16
+      "id": 19
     }
   ]
 }

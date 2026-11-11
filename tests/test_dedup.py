@@ -1,7 +1,7 @@
 import unittest
 from dataclasses import dataclass
 
-from jobpipe import dedup, jobs, places
+from jobpipe import dedup, employers, jobs, places
 
 
 @dataclass
@@ -24,10 +24,10 @@ def item(source, source_id, title, company="Acme AG", country="CH", seen="2026-1
 
 class KeyTest(unittest.TestCase):
     def test_company(self):
-        self.assertEqual(dedup.company_key("SOPHiA GENETICS SA"), dedup.company_key("sophia-genetics"))
-        self.assertEqual(dedup.company_key("Proxima Fusion GmbH"), "proxima fusion")
-        self.assertEqual(dedup.company_key("Acme S.L."), "acme")
-        self.assertEqual(dedup.company_key("The Company"), "the company")  # nothing left: keep everything
+        self.assertEqual(employers.company_key("SOPHiA GENETICS SA"), employers.company_key("sophia-genetics"))
+        self.assertEqual(employers.company_key("Proxima Fusion GmbH"), "proxima fusion")
+        self.assertEqual(employers.company_key("Acme S.L."), "acme")
+        self.assertEqual(employers.company_key("The Company"), "the company")  # nothing left: keep everything
 
     def test_title(self):
         same = ["Data Engineer (m/w/d)", "Data Engineer - Zürich", "Data Engineer, Remote", "DATA ENGINEER"]
@@ -52,6 +52,15 @@ class GroupTest(unittest.TestCase):
         self.assertEqual(groups[1], ("greenhouse:acme:1", 0))
         self.assertEqual(groups[2], ("greenhouse:acme:2", 0))
         self.assertEqual(groups[3], ("greenhouse:acme:3", 0))
+
+    def test_big_tech_names_are_one_company(self):
+        items = [
+            item("adzuna", "ch:1", "Software Engineer III", company="Google Switzerland GmbH"),
+            item("greenhouse", "x:1", "Software Engineer III, Google Cloud", company="Google"),  # another title
+            item("adzuna", "ch:2", "Software Engineer III", company="Google DeepMind"),
+        ]
+
+        self.assertEqual([job for job, _ in dedup.group(items)], ["adzuna:ch:1", "greenhouse:x:1", "adzuna:ch:1"])
 
     def test_an_open_posting_stands_for_the_job(self):
         items = [item("greenhouse", "acme:1", "SRE", is_open=False), item("adzuna", "ch:1", "SRE")]

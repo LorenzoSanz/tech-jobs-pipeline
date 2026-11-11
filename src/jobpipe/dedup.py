@@ -3,8 +3,9 @@
 One job often shows up several times: on the employer's board and on Adzuna,
 or on one board once per city. Two postings are the same job when they have
 
-- the same company, once legal forms and punctuation are dropped
-  ("SOPHiA GENETICS SA" and the board "sophia-genetics");
+- the same company, once legal forms, places and punctuation are dropped
+  ("SOPHiA GENETICS SA" and the board "sophia-genetics", "Google Switzerland
+  GmbH" and "Google"; see employers.py);
 - the same title, once gender markers ("(m/w/d)"), city names and
   punctuation are dropped ("Data Engineer - Zürich" and "Data Engineer");
 - the same first country, so "Data Engineer" in Zurich and in Madrid are two jobs;
@@ -27,15 +28,11 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Any, Sequence
 
-from jobpipe import jobs, places
+from jobpipe import employers, jobs, places
 
 GAP = timedelta(days=30)
 NEVER_MERGED = frozenset({"hn"})
 
-LEGAL_FORMS = frozenset(
-    "ag gmbh sa sl slu sau inc ltd llc bv nv sas sarl plc ab oy as aps spa srl co corp corporation limited"
-    " company se kg holding group com io careers jobs hq the a b l s u v".split()
-)
 GENDER = re.compile(
     r"\(?\b(?:[mwfdhx]|nb)(?:\s*/\s*(?:[mwfdhx]|nb)){1,3}\b\)?|\((?:all genders|alle geschlechter|gn\*?)\)"
     r"|\ball genders\b",
@@ -51,12 +48,6 @@ CITY_NAMES = re.compile(
         (re.escape(name) for name in places.CITY_BY_KEY if name not in COMMON_WORDS), key=len, reverse=True,
     )) + r")\b"
 )  # fmt: skip
-
-
-def company_key(company: str | None) -> str:
-    words = re.sub(r"[^a-z0-9]+", " ", places.fold(company or "")).split()
-    kept = [w for w in words if w not in LEGAL_FORMS]
-    return " ".join(kept or words)
 
 
 def title_key(title: str | None) -> str:
@@ -91,7 +82,9 @@ def group(items: Sequence[Any]) -> list[tuple[str, int]]:
     by_key: dict[tuple, list[int]] = defaultdict(list)
     for n, item in enumerate(items):
         posting = item.posting
-        company, title = company_key(posting.company), title_key(posting.title)
+        employer = employers.employer_of(posting.company)
+        company = employers.employer_key(employer.name or posting.company)
+        title = title_key(posting.title)
         if posting.source in NEVER_MERGED or not company or not title:
             by_key[("single", n)].append(n)
         else:

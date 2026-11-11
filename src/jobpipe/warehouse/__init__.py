@@ -19,7 +19,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping
 
-from jobpipe import dedup, jobs, match, roles, seniority, tech
+from jobpipe import dedup, employers, jobs, match, roles, seniority, tech
 from jobpipe.bronze import read_records
 from jobpipe.sources import adzuna, ats, levelsfyi
 
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_DSN = "postgresql://jobpipe:jobpipe@127.0.0.1:55432/jobpipe"
 
 POSTING_COLUMNS = (
-    "source", "source_id", "title", "company", "location", "city", "country", "countries", "remote", "url",
+    "source", "source_id", "title", "company", "employer", "company_tier", "location", "city", "country", "countries", "remote", "url",
     "published", "first_seen", "last_seen", "snapshots", "is_open", "regions", "role", "seniority",
     "technologies", "job_id", "job_rank",
 )  # fmt: skip
@@ -153,8 +153,10 @@ def _current_postings(data_dir: Path) -> Iterator[Current]:
 def _postings(data_dir: Path, tables: Tables, profile: match.Profile | None) -> None:
     for current in current_postings(data_dir):
         posting, source, place = current.posting, current.posting.source, current.posting.place
+        employer = employers.employer_of(posting.company)
         tables.postings.append((
-            source, posting.source_id, posting.title, posting.company, posting.location, place.city,
+            source, posting.source_id, posting.title, posting.company, employer.name, employer.tier,
+            posting.location, place.city,
             place.country, list(place.countries), place.remote, posting.url, _ts(posting.published),
             _ts(current.first_seen), _ts(current.last_seen), current.snapshots, current.is_open,
             list(posting.regions), current.role, current.seniority, list(current.technologies),
@@ -164,7 +166,7 @@ def _postings(data_dir: Path, tables: Tables, profile: match.Profile | None) -> 
             tables.posted_salaries.append((source, posting.source_id, n, *s))
         if profile is not None:
             m = match.match(profile, posting.title, current.role, posting.regions, current.technologies,
-                            current.seniority)
+                            current.seniority, employer.tier)
             tables.posting_matches.append((source, posting.source_id, m.fits, m.score, m.rank, list(m.have), list(m.missing)))
 
 

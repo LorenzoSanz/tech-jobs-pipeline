@@ -104,7 +104,14 @@ levels.fyi by hand.
 cp config/profile.example.toml config/profile.toml   # list your skills, roles, regions and seniority
 jobpipe feed                     # open postings, best match first, with what each one asks that you lack
 jobpipe feed --days 7 --min-score 50
+jobpipe feed --tier faang --tier big_tech   # only FAANG + Microsoft and other big tech
 ```
+
+Big tech employers are recognised whatever name they publish under
+("Google Switzerland GmbH", "Amazon Web Services EMEA SARL"), see
+`src/jobpipe/employers.py`. FAANG career sites have no public API and Amazon's
+terms forbid automated access, so their postings come from Adzuna and HN only
+([ADR 0009](docs/adr/0009-big-tech-employers.md)).
 
 Each posting's technologies are found in its title and description
 (`src/jobpipe/tech.py`). The match is the share of them you know; the feed
@@ -126,11 +133,12 @@ Then open http://localhost:3000. Four dashboards, in English and Spanish
 
 - **For you** (the home page): open postings that fit your profile, best
   match first, and what to learn: the technologies they ask for that you lack.
-- **Salaries**: p25 / median / p75 / p90 by region, role, seniority and currency, where
+- **Salaries**: p25 / median / p75 / p90 by region, role, seniority, company tier and currency, where
   your offer falls, best-paying postings with links, Adzuna histograms,
   Levels.fyi.
-- **Market and postings**: postings per month and region, who is hiring, the
-  most asked technologies and their share per month, and the list of postings.
+- **Market and postings**: postings per month and region, who is hiring, big
+  tech with open jobs, the most asked technologies and their share per month,
+  and the list of postings.
 - **Pipeline health**: runs and records per source, days since the last
   collection, distinct jobs and the share of postings whose location was
   understood.

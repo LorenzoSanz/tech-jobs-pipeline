@@ -66,6 +66,44 @@
         }
       },
       {
+        "type": "custom",
+        "name": "tier",
+        "label": "Company type",
+        "description": "FAANG + Microsoft, other big tech, or the rest. See src/jobpipe/employers.py.",
+        "multi": true,
+        "includeAll": false,
+        "query": "FAANG + Microsoft : faang,Big tech : big_tech,Other companies : other",
+        "options": [
+          {
+            "text": "FAANG + Microsoft",
+            "value": "faang",
+            "selected": true
+          },
+          {
+            "text": "Big tech",
+            "value": "big_tech",
+            "selected": true
+          },
+          {
+            "text": "Other companies",
+            "value": "other",
+            "selected": true
+          }
+        ],
+        "current": {
+          "text": [
+            "FAANG + Microsoft",
+            "Big tech",
+            "Other companies"
+          ],
+          "value": [
+            "faang",
+            "big_tech",
+            "other"
+          ]
+        }
+      },
+      {
         "type": "query",
         "name": "role",
         "label": "Role",
@@ -247,7 +285,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT count(*) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}"
+          "rawSql": "SELECT count(*) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}"
         }
       ],
       "options": {
@@ -314,7 +352,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT count(*) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw} AND first_seen > now() - interval '7 days'"
+          "rawSql": "SELECT count(*) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw} AND first_seen > now() - interval '7 days'"
         }
       ],
       "options": {
@@ -381,7 +419,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT count(*) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw} AND score >= 0.7"
+          "rawSql": "SELECT count(*) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw} AND score >= 0.7"
         }
       ],
       "options": {
@@ -448,7 +486,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT 100 * percentile_cont(0.5) WITHIN GROUP (ORDER BY score) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}"
+          "rawSql": "SELECT 100 * percentile_cont(0.5) WITHIN GROUP (ORDER BY score) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}"
         }
       ],
       "options": {
@@ -528,7 +566,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT round(100 * score) AS \"Match\", title AS \"Title\",\n       company AS \"Company\", place AS \"Location\",\n       CASE seniority WHEN 'intern' THEN 'Intern / trainee' WHEN 'head' THEN 'Head / director' WHEN 'lead' THEN 'Lead / staff / principal' WHEN 'senior' THEN 'Senior' WHEN 'junior' THEN 'Junior' WHEN 'mid' THEN 'Mid-level' WHEN 'unspecified' THEN 'Not stated' ELSE seniority END AS \"Seniority\",\n       array_to_string(ARRAY(SELECT t.label FROM unnest(have) WITH ORDINALITY AS u(key, n) JOIN silver.technologies t USING (key) ORDER BY n), ', ') AS \"You know\", array_to_string(ARRAY(SELECT t.label FROM unnest(missing) WITH ORDINALITY AS u(key, n) JOIN silver.technologies t USING (key) ORDER BY n), ', ') AS \"You lack\",\n       to_char(first_seen, 'YYYY-MM-DD') AS \"First seen\", source AS \"Source\", url\nFROM gold.feed\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}\nORDER BY rank DESC, cardinality(have) DESC, first_seen DESC\nLIMIT 300"
+          "rawSql": "SELECT round(100 * score) AS \"Match\", title AS \"Title\",\n       coalesce(employer, company) AS \"Company\", place AS \"Location\",\n       CASE seniority WHEN 'intern' THEN 'Intern / trainee' WHEN 'head' THEN 'Head / director' WHEN 'lead' THEN 'Lead / staff / principal' WHEN 'senior' THEN 'Senior' WHEN 'junior' THEN 'Junior' WHEN 'mid' THEN 'Mid-level' WHEN 'unspecified' THEN 'Not stated' ELSE seniority END AS \"Seniority\",\n       array_to_string(ARRAY(SELECT t.label FROM unnest(have) WITH ORDINALITY AS u(key, n) JOIN silver.technologies t USING (key) ORDER BY n), ', ') AS \"You know\", array_to_string(ARRAY(SELECT t.label FROM unnest(missing) WITH ORDINALITY AS u(key, n) JOIN silver.technologies t USING (key) ORDER BY n), ', ') AS \"You lack\",\n       to_char(first_seen, 'YYYY-MM-DD') AS \"First seen\", source AS \"Source\", url\nFROM gold.feed\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}\nORDER BY rank DESC, cardinality(have) DESC, first_seen DESC\nLIMIT 300"
         }
       ],
       "options": {
@@ -694,7 +732,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT t.label AS \"Technology\",\n       round(100.0 * count(*) / nullif((SELECT count(*) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw} AND score IS NOT NULL), 0), 1)\n         AS \"Postings\"\nFROM gold.feed f\nCROSS JOIN LATERAL unnest(f.missing) AS u(key)\nJOIN silver.technologies t USING (key)\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}\nGROUP BY t.label ORDER BY 2 DESC, 1 LIMIT 15"
+          "rawSql": "SELECT t.label AS \"Technology\",\n       round(100.0 * count(*) / nullif((SELECT count(*) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw} AND score IS NOT NULL), 0), 1)\n         AS \"Postings\"\nFROM gold.feed f\nCROSS JOIN LATERAL unnest(f.missing) AS u(key)\nJOIN silver.technologies t USING (key)\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}\nGROUP BY t.label ORDER BY 2 DESC, 1 LIMIT 15"
         }
       ],
       "options": {
@@ -755,7 +793,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT t.label AS \"Technology\",\n       nullif(count(*) FILTER (WHERE u.key = ANY(f.have)), 0) AS \"You know\",\n       nullif(count(*) FILTER (WHERE u.key = ANY(f.missing)), 0) AS \"You lack\"\nFROM gold.feed f\nCROSS JOIN LATERAL unnest(f.have || f.missing) AS u(key)\nJOIN silver.technologies t USING (key)\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}\nGROUP BY t.label ORDER BY count(*) DESC, 1 LIMIT 15"
+          "rawSql": "SELECT t.label AS \"Technology\",\n       nullif(count(*) FILTER (WHERE u.key = ANY(f.have)), 0) AS \"You know\",\n       nullif(count(*) FILTER (WHERE u.key = ANY(f.missing)), 0) AS \"You lack\"\nFROM gold.feed f\nCROSS JOIN LATERAL unnest(f.have || f.missing) AS u(key)\nJOIN silver.technologies t USING (key)\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}\nGROUP BY t.label ORDER BY count(*) DESC, 1 LIMIT 15"
         }
       ],
       "options": {

@@ -7,6 +7,7 @@ scheduler can parse the result of each run.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import logging
 import os
@@ -20,7 +21,7 @@ from typing import Sequence
 from jobpipe.bronze import BronzeWriter, WriteResult, read_records
 from jobpipe.discovery import REGION_KEYWORDS, discover_from_hn, location_pattern
 from jobpipe.http import HttpClient, HttpError
-from jobpipe import match, salary, tech
+from jobpipe import employers, match, salary, tech
 from jobpipe.sources import adzuna, ats, hn, levelsfyi
 from jobpipe.verification import render_toml, verify
 
@@ -203,17 +204,20 @@ def _feed(args: argparse.Namespace) -> int:
         return 2
     if profile is None:
         return 2
+    if args.tier:
+        profile = dataclasses.replace(profile, company_tiers=frozenset(args.tier))
     since = (datetime.now(timezone.utc) - timedelta(days=args.days)).isoformat() if args.days else ""
     rows = []
     for current in warehouse.current_postings(args.data_dir):
         posting = current.posting
+        employer = employers.employer_of(posting.company)
         m = match.match(profile, posting.title, current.role, posting.regions, current.technologies,
-                        current.seniority)  # fmt: skip
+                        current.seniority, employer.tier)  # fmt: skip
         if current.is_open and current.job_rank == 0 and m.fits:
-            rows.append((current, m))
-    gaps = match.gaps(m for _, m in rows)
+            rows.append((current, m, employer))
+    gaps = match.gaps(m for _, m, _ in rows)
     shown = [
-        (c, m) for c, m in rows
+        (c, m, e) for c, m, e in rows
         if c.first_seen >= since and (m.score or 0) * 100 >= args.min_score
     ]  # fmt: skip
     shown.sort(key=lambda row: (row[1].rank, len(row[1].have), row[0].first_seen), reverse=True)
@@ -224,21 +228,23 @@ def _feed(args: argparse.Namespace) -> int:
         print(json.dumps({
             "postings": [{
                 "score": m.score, "title": c.posting.title, "company": c.posting.company,
+                "employer": e.name, "company_tier": e.tier,
                 "location": c.posting.location, "city": c.posting.place.city,
                 "countries": list(c.posting.countries), "remote": c.posting.place.remote,
                 "regions": list(c.posting.regions), "role": c.role, "seniority": c.seniority,
                 "have": list(m.have), "missing": list(m.missing), "first_seen": c.first_seen,
                 "url": c.posting.url, "source": c.posting.source,
-            } for c, m in shown],
+            } for c, m, e in shown],
             "gaps": [{"technology": key, "postings": n, "share": share} for key, n, share in gaps],
         }, indent=2, ensure_ascii=False))  # fmt: skip
         return 0
 
     print(f"{len(rows)} open postings fit your profile; showing {len(shown)}.\n")
-    for c, m in shown:
+    tags = {employers.FAANG.key: "  [FAANG]", employers.BIG_TECH.key: "  [big tech]"}
+    for c, m, e in shown:
         score = f"{m.score:4.0%}" if m.score is not None else "   -"
         place = ", ".join(filter(None, [c.posting.company, c.posting.location, "/".join(c.posting.regions)]))
-        print(f"{score}  {c.posting.title}" + (f"  ({place})" if place else ""))
+        print(f"{score}  {c.posting.title}" + (f"  ({place})" if place else "") + tags.get(e.tier, ""))
         if m.have or m.missing:
             known = ", ".join(label[k] for k in m.have) or "-"
             print(f"      you know: {known}" + (f"  | lacks: {', '.join(label[k] for k in m.missing)}" if m.missing else ""))
@@ -403,6 +409,8 @@ def build_parser() -> argparse.ArgumentParser:
     feed.add_argument("--profile", type=Path, default=DEFAULT_PROFILE, help=f"default: {DEFAULT_PROFILE}")
     feed.add_argument("--days", type=int, help="only postings first seen in the last N days")
     feed.add_argument("--min-score", type=int, default=0, help="minimum match, 0-100")
+    feed.add_argument("--tier", action="append", choices=[t.key for t in employers.TIERS],
+                      help="only these company tiers (repeatable); overrides company_tiers in the profile")
     feed.add_argument("--limit", type=int, default=25)
     feed.add_argument("--format", choices=["text", "json"], default="text")
 

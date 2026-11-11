@@ -15,6 +15,8 @@ CREATE TABLE silver.postings (
     source_id   text        NOT NULL,
     title       text        NOT NULL,
     company     text,
+    employer    text,                 -- canonical name of a big tech employer, see jobpipe/employers.py
+    company_tier text       NOT NULL, -- faang, big_tech or other
     location    text,                 -- as published
     city        text,                 -- first city named, one spelling, see jobpipe/places.py
     country     text,                 -- ISO 3166 alpha-2 of the first place; NULL when unknown
@@ -172,7 +174,7 @@ WITH chosen AS (
     JOIN silver.posted_salaries s USING (source, source_id)
     ORDER BY p.job_id, s.predicted, p.job_rank
 )
-SELECT s.*, p.job_id, p.title, p.role, p.seniority, p.company, p.location, p.city, p.country, p.url, p.regions,
+SELECT s.*, p.job_id, p.title, p.role, p.seniority, p.company, p.employer, p.company_tier, p.location, p.city, p.country, p.url, p.regions,
        coalesce(p.published, p.first_seen) AS posted_at
 FROM chosen
 JOIN silver.posted_salaries s USING (source, source_id)
@@ -181,13 +183,13 @@ JOIN silver.postings p USING (source, source_id);
 -- Jobs per month; `postings` counts jobs, each once.
 CREATE VIEW gold.postings_monthly AS
 SELECT date_trunc('month', posted_at)::date AS month,
-       source, region, role, seniority, count(*) AS postings
+       source, region, role, seniority, company_tier, count(*) AS postings
 FROM gold.job_regions
-GROUP BY 1, 2, 3, 4, 5;
+GROUP BY 1, 2, 3, 4, 5, 6;
 
 -- Open jobs that fit the profile: what the "For you" dashboard lists.
 CREATE VIEW gold.feed AS
-SELECT j.source, j.source_id, j.title, j.company, j.place, j.country, j.url, j.regions, j.role, j.seniority,
+SELECT j.source, j.source_id, j.title, j.company, j.employer, j.company_tier, j.place, j.country, j.url, j.regions, j.role, j.seniority,
        j.first_seen, j.posted_at, j.postings, j.sources,
        m.score, m.rank, m.have, m.missing
 FROM gold.jobs j
@@ -196,7 +198,7 @@ WHERE j.is_open AND m.fits;
 
 -- One row per job and technology it asks for.
 CREATE VIEW gold.posting_technologies AS
-SELECT j.source, j.source_id, j.role, j.seniority, j.regions, j.is_open, j.posted_at,
+SELECT j.source, j.source_id, j.role, j.seniority, j.company_tier, j.regions, j.is_open, j.posted_at,
        t.key AS technology, t.label, t.category
 FROM gold.jobs j
 CROSS JOIN LATERAL unnest(j.technologies) AS u(key)

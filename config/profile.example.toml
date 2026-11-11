@@ -16,5 +16,9 @@ regions = ["ch", "es", "eu"]
 # Empty means every level.
 seniority = ["junior", "mid", "senior", "unspecified"]
 
+# Company tiers to keep (src/jobpipe/employers.py): faang (Google, Meta, Amazon, Apple,
+# Netflix, Microsoft), big_tech, other. Empty means every company.
+company_tiers = []
+
 # Titles to skip, as a regex (case-insensitive). Single quotes keep backslashes as typed.
 exclude_title = 'sales|account (executive|manager)'
