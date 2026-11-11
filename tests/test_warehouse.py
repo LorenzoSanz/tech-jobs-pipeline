@@ -6,12 +6,14 @@ import unittest
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from jobpipe import warehouse
+from jobpipe import match, warehouse
 from jobpipe.bronze import BronzeWriter, RawItem
 
 DASHBOARDS = Path(__file__).resolve().parent.parent / "grafana" / "dashboards"
 DASHBOARD_FILES = sorted(DASHBOARDS.glob("*/*.json"))
 TEST_DSN = os.environ.get("JOBPIPE_TEST_DATABASE_URL")
+PROFILE = match.Profile(skills=frozenset({"python", "postgresql"}), roles=frozenset({"backend", "data"}),
+                        regions=frozenset({"ch", "es"}))  # fmt: skip
 
 
 def clock(day: int, hour: int = 8):
@@ -23,6 +25,7 @@ def ashby_job(job_id: str = "a1", low: int = 120000, title: str = "Backend Engin
         "id": job_id, "title": title, "location": "Zurich", "publishedAt": "2026-10-01T00:00:00Z",
         "address": {"postalAddress": {"addressCountry": "Switzerland"}},
         "jobUrl": f"https://jobs.ashbyhq.com/acme/{job_id}",
+        "descriptionPlain": "Python and Kafka services on PostgreSQL.",
         "compensation": {"summaryComponents": [
             {"compensationType": "Salary", "currencyCode": "CHF", "interval": "1 YEAR",
              "minValue": low, "maxValue": low + 30000}]},
@@ -30,10 +33,13 @@ def ashby_job(job_id: str = "a1", low: int = 120000, title: str = "Backend Engin
 
 
 def write_fixture(root: Path) -> None:
-    """Two snapshots of one Swiss posting, one Spanish HN posting, and salary benchmarks."""
-    BronzeWriter(root, clock(1)).write("ashby", [RawItem("acme:a1", {"board": "acme", "job": ashby_job(low=110000)})])
+    """Two snapshots of a Swiss board (a2 is gone from the second), one Spanish HN posting, and benchmarks."""
+    BronzeWriter(root, clock(1)).write("ashby", [
+        RawItem("acme:a1", {"board": "acme", "job": ashby_job(low=110000)}),
+        RawItem("acme:a2", {"board": "acme", "job": ashby_job("a2", title="Senior Backend Engineer")}),
+    ])  # fmt: skip
     BronzeWriter(root, clock(9)).write("ashby", [RawItem("acme:a1", {"board": "acme", "job": ashby_job()})])
-    comment = {"id": 7, "author": "x", "text": "Acme | Madrid | Data Engineer<p>€55k - €70k", "created_at": None}
+    comment = {"id": 7, "author": "x", "text": "Acme | Madrid | Data Engineer<p>€55k - €70k<p>Python and dbt", "created_at": None}
     BronzeWriter(root, clock(9)).write(
         "hn", [RawItem("7", {"comment": comment}, datetime(2026, 11, 2, tzinfo=timezone.utc))]
     )
@@ -56,7 +62,7 @@ class BuildTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
         write_fixture(self.root)
-        self.tables = warehouse.build(self.root)
+        self.tables = warehouse.build(self.root, PROFILE)
 
     def tearDown(self) -> None:
         self.tmp.cleanup()
@@ -70,7 +76,23 @@ class BuildTest(unittest.TestCase):
         self.assertEqual(swiss["snapshots"], 2)
         self.assertEqual(swiss["regions"], ["ch"])
         self.assertEqual(swiss["role"], "backend")
+        self.assertEqual(swiss["technologies"], ["python", "kafka", "postgresql"])
         self.assertEqual(rows["7"]["regions"], ["es"])
+        self.assertEqual(rows["7"]["technologies"], ["python", "dbt"])
+
+    def test_open_means_in_the_newest_snapshot_of_its_board(self):
+        rows = {row[1]: dict(zip(warehouse.POSTING_COLUMNS, row)) for row in self.tables.postings}
+
+        self.assertEqual({key: row["is_open"] for key, row in rows.items()},
+                         {"acme:a1": True, "acme:a2": False, "7": True})  # fmt: skip
+
+    def test_matches_against_the_profile(self):
+        matches = {row[1]: dict(zip(warehouse.MATCH_COLUMNS, row)) for row in self.tables.posting_matches}
+
+        self.assertAlmostEqual(matches["acme:a1"]["score"], 2 / 3)
+        self.assertEqual(matches["acme:a1"]["missing"], ["kafka"])
+        self.assertEqual((matches["7"]["fits"], matches["7"]["have"]), (True, ["python"]))
+        self.assertEqual(warehouse.build(self.root).posting_matches, [])
 
     def test_salaries_come_from_the_newest_snapshot(self):
         by_id = {row[1]: dict(zip(warehouse.SALARY_COLUMNS, row)) for row in self.tables.posted_salaries}
@@ -83,7 +105,7 @@ class BuildTest(unittest.TestCase):
         self.assertEqual([r[2] for r in self.tables.adzuna_salary_history], [date(2026, 9, 1), date(2026, 10, 1)])
         self.assertEqual(self.tables.levelsfyi_benchmarks[0][3], "zurich-area")
         self.assertEqual(sorted((r[0], r[3]) for r in self.tables.ingest_runs),
-                         [("adzuna_salary", 2), ("ashby", 1), ("ashby", 1), ("hn", 1), ("levelsfyi", 1)])  # fmt: skip
+                         [("adzuna_salary", 2), ("ashby", 1), ("ashby", 2), ("hn", 1), ("levelsfyi", 1)])  # fmt: skip
 
     def test_write_explains_a_missing_driver(self):
         try:
@@ -107,7 +129,8 @@ def panel_sql(dashboard: dict) -> list[tuple[str, str]]:
     values = {
         "region": "'ch','es','eu','other'", "currency:sqlstring": "'CHF'", "role": "'__all'",
         "company": "'Acme','acme'", "predicted:raw": "false", "offer:sqlstring": "'100000'",
-        "adzuna:sqlstring": "'ch | data engineer'", "with_salary:raw": "true",
+        "adzuna:sqlstring": "'ch | data engineer'", "with_salary:raw": "true", "technology": "'python','dbt'",
+        "min_match:raw": "0", "new:raw": "36500",
     }  # fmt: skip
     filled = []
     for title, sql in queries:
@@ -129,7 +152,7 @@ class PostgresTest(unittest.TestCase):
         cls.tmp = tempfile.TemporaryDirectory()
         root = Path(cls.tmp.name)
         write_fixture(root)
-        cls.counts = warehouse.write(TEST_DSN, warehouse.build(root))
+        cls.counts = warehouse.write(TEST_DSN, warehouse.build(root, PROFILE))
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -141,16 +164,20 @@ class PostgresTest(unittest.TestCase):
 
     def test_load_is_repeatable(self):
         root = Path(self.tmp.name)
-        warehouse.write(TEST_DSN, warehouse.build(root))
+        warehouse.write(TEST_DSN, warehouse.build(root, PROFILE))
 
-        self.assertEqual(self.query("SELECT count(*) FROM silver.postings"), [(2,)])
+        self.assertEqual(self.query("SELECT count(*) FROM silver.postings"), [(3,)])
         self.assertEqual(self.query("SELECT count(*) FROM silver.load_log"), [(1,)])
 
     def test_gold_views(self):
         regions = dict(self.query("SELECT source_id, region FROM gold.posting_regions"))
-        midpoint = self.query("SELECT midpoint FROM gold.salaries WHERE source = 'ashby'")
+        midpoint = self.query("SELECT midpoint FROM gold.salaries WHERE source_id = 'acme:a1'")
+        feed = self.query("SELECT source_id FROM gold.feed ORDER BY rank DESC")
+        demand = self.query("SELECT technology, count(*) FROM gold.posting_technologies GROUP BY 1 ORDER BY 1")
 
-        self.assertEqual(regions, {"acme:a1": "ch", "7": "es"})
+        self.assertEqual(regions, {"acme:a1": "ch", "acme:a2": "ch", "7": "es"})
+        self.assertEqual(feed, [("acme:a1",), ("7",)])  # a2 is closed; 2 of 3 known ranks above 1 of 2
+        self.assertEqual(demand, [("dbt", 1), ("kafka", 2), ("postgresql", 2), ("python", 3)])
         self.assertEqual(float(midpoint[0][0]), 135000)
 
     def test_every_dashboard_query_runs(self):
@@ -167,6 +194,14 @@ class PostgresTest(unittest.TestCase):
             [(_, sql)] = [q for q in panel_sql(dashboard) if q[0] == title]
 
             self.assertEqual(float(self.query(sql)[0][0]), 0.0)  # 100k is below the CHF 120-150k posting
+
+    def test_feed_dashboard_lists_open_matches_with_labels(self):
+        dashboard = json.loads((DASHBOARDS / "en" / "feed.json").read_text(encoding="utf-8"))
+        [(_, sql)] = [q for q in panel_sql(dashboard) if q[0] == "Click the title to open the posting"]
+
+        rows = self.query(sql)
+        self.assertEqual([(r[0], r[1], r[4], r[5]) for r in rows],
+                         [(67, "Backend Engineer", "Python, PostgreSQL", "Kafka"), (50, rows[1][1], "Python", "dbt")])  # fmt: skip
 
     def test_role_labels_follow_the_language(self):
         for lang, data in [("en", "Data"), ("es", "Datos")]:
@@ -186,11 +221,11 @@ class DashboardFilesTest(unittest.TestCase):
                 if panel["type"] == "row":
                     continue
                 self.assertEqual(panel["datasource"]["uid"], "jobpipe-pg", f"{path}: {panel_name(panel)}")
-        names = {"jobpipe-salaries", "jobpipe-market", "jobpipe-pipeline"}
+        names = {"jobpipe-feed", "jobpipe-salaries", "jobpipe-market", "jobpipe-pipeline"}
         self.assertEqual(uids, names | {f"{uid}-es" for uid in names})
 
     def test_languages_have_the_same_layout_and_filters(self):
-        for name in ("salaries", "market", "pipeline"):
+        for name in ("feed", "salaries", "market", "pipeline"):
             en, es = (json.loads((DASHBOARDS / lang / f"{name}.json").read_text(encoding="utf-8")) for lang in ("en", "es"))
             with self.subTest(dashboard=name):
                 self.assertEqual([p["gridPos"] for p in en["panels"]], [p["gridPos"] for p in es["panels"]])

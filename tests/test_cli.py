@@ -112,6 +112,32 @@ class CliTest(unittest.TestCase):
         self.assertIn("120k-150k  acme | Backend Engineer | Zurich", out)
         self.assertEqual(json.loads(as_json)["postings"], {})
 
+    def test_feed_ranks_open_postings_that_fit_the_profile(self):
+        def job(job_id, title, description, location="Zurich"):
+            return RawItem(f"acme:{job_id}", {"board": "acme", "job": {
+                "id": job_id, "title": title, "location": location, "descriptionPlain": description,
+                "jobUrl": f"https://jobs.ashbyhq.com/acme/{job_id}"}})  # fmt: skip
+
+        BronzeWriter(self.data_dir).write("ashby", [
+            job("a1", "Data Engineer", "Python and Kafka"),
+            job("a2", "Data Engineer", "Python, SQL and Airflow"),
+            job("a3", "Data Engineer", "Python", location="Austin, TX"),
+            job("a4", "Product Designer", "Figma"),
+        ])  # fmt: skip
+        profile = self.root / "profile.toml"
+        profile.write_text('skills = ["python", "sql", "airflow"]\nroles = ["data"]\nregions = ["ch"]\n')
+
+        code, out = self.run_cli("feed", "--profile", str(profile), "--format", "json")
+        text_code, text = self.run_cli("feed", "--profile", str(profile))
+        missing_code, _ = self.run_cli("feed", "--profile", str(self.root / "none.toml"))
+
+        feed = json.loads(out)
+        self.assertEqual((code, text_code, missing_code), (0, 0, 2))
+        self.assertEqual([p["url"][-2:] for p in feed["postings"]], ["a2", "a1"])
+        self.assertEqual(feed["postings"][1]["missing"], ["kafka"])
+        self.assertEqual(feed["gaps"], [{"technology": "kafka", "postings": 1, "share": 0.5}])
+        self.assertIn("lacks: Kafka", text)
+
     def test_ingest_adzuna_salaries_one_run_per_search(self):
         transport = FakeTransport()
         transport.add(body={"histogram": {"90000": "3"}})

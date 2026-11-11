@@ -1270,14 +1270,17 @@
         "orientation": "vertical",
         "showValue": "auto",
         "legend": {
-          "showLegend": false
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
         },
         "barWidth": 0.75,
         "barRadius": 0.2,
         "xTickLabelRotation": 0,
         "tooltip": {
           "mode": "single"
-        }
+        },
+        "stacking": "none"
       },
       "fieldConfig": {
         "defaults": {
@@ -1339,7 +1342,7 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "lineInterpolation": "smooth",
+            "lineInterpolation": "linear",
             "fillOpacity": 18,
             "gradientMode": "opacity",
             "showPoints": "never"

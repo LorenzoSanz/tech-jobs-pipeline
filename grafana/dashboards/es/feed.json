@@ -1,0 +1,807 @@
+{
+  "uid": "jobpipe-feed-es",
+  "title": "Para ti",
+  "description": "Ofertas abiertas que encajan con tu perfil, de mejor a peor, y lo que piden que te falta. Necesita config/profile.toml; ejecuta jobpipe load después de editarlo.",
+  "tags": [
+    "jobpipe",
+    "es"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "graphTooltip": 1,
+  "liveNow": false,
+  "time": {
+    "from": "now-90d",
+    "to": "now"
+  },
+  "refresh": "",
+  "timepicker": {
+    "refresh_intervals": []
+  },
+  "templating": {
+    "list": [
+      {
+        "type": "custom",
+        "name": "region",
+        "label": "Región",
+        "description": "",
+        "multi": true,
+        "includeAll": false,
+        "query": "Suiza : ch,España : es,Resto de Europa : eu,Otras / sin región : other",
+        "options": [
+          {
+            "text": "Suiza",
+            "value": "ch",
+            "selected": true
+          },
+          {
+            "text": "España",
+            "value": "es",
+            "selected": true
+          },
+          {
+            "text": "Resto de Europa",
+            "value": "eu",
+            "selected": true
+          },
+          {
+            "text": "Otras / sin región",
+            "value": "other",
+            "selected": false
+          }
+        ],
+        "current": {
+          "text": [
+            "Suiza",
+            "España",
+            "Resto de Europa"
+          ],
+          "value": [
+            "ch",
+            "es",
+            "eu"
+          ]
+        }
+      },
+      {
+        "type": "query",
+        "name": "role",
+        "label": "Rol",
+        "description": "Familia de puesto, deducida del título.",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "jobpipe-pg"
+        },
+        "query": "SELECT role AS __value, CASE role WHEN 'product' THEN 'Producto y diseño' WHEN 'eng_management' THEN 'Gestión técnica' WHEN 'ml' THEN 'ML / IA' WHEN 'data' THEN 'Datos' WHEN 'devops' THEN 'DevOps / SRE / Plataforma' WHEN 'security' THEN 'Seguridad' WHEN 'mobile' THEN 'Móvil' WHEN 'qa' THEN 'QA / Test' WHEN 'embedded' THEN 'Embebido / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Ingeniería (general)' WHEN 'other' THEN 'Otros (no técnicos)' ELSE role END AS __text FROM gold.feed GROUP BY role ORDER BY count(*) DESC",
+        "definition": "SELECT role AS __value, CASE role WHEN 'product' THEN 'Producto y diseño' WHEN 'eng_management' THEN 'Gestión técnica' WHEN 'ml' THEN 'ML / IA' WHEN 'data' THEN 'Datos' WHEN 'devops' THEN 'DevOps / SRE / Plataforma' WHEN 'security' THEN 'Seguridad' WHEN 'mobile' THEN 'Móvil' WHEN 'qa' THEN 'QA / Test' WHEN 'embedded' THEN 'Embebido / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Ingeniería (general)' WHEN 'other' THEN 'Otros (no técnicos)' ELSE role END AS __text FROM gold.feed GROUP BY role ORDER BY count(*) DESC",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "sort": 0,
+        "allValue": "'__all'",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "type": "custom",
+        "name": "min_match",
+        "label": "Encaje",
+        "description": "Porcentaje de las tecnologías que pide la oferta que conoces.",
+        "multi": false,
+        "includeAll": false,
+        "query": "Cualquiera : 0,50%+ : 50,70%+ : 70,90%+ : 90",
+        "options": [
+          {
+            "text": "Cualquiera",
+            "value": "0",
+            "selected": true
+          },
+          {
+            "text": "50%+",
+            "value": "50",
+            "selected": false
+          },
+          {
+            "text": "70%+",
+            "value": "70",
+            "selected": false
+          },
+          {
+            "text": "90%+",
+            "value": "90",
+            "selected": false
+          }
+        ],
+        "current": {
+          "text": "Cualquiera",
+          "value": "0"
+        }
+      },
+      {
+        "type": "custom",
+        "name": "new",
+        "label": "Vista por primera vez",
+        "description": "",
+        "multi": false,
+        "includeAll": false,
+        "query": "Cuando sea : 36500,Últimas 24 horas : 1,Últimos 7 días : 7,Últimos 30 días : 30",
+        "options": [
+          {
+            "text": "Cuando sea",
+            "value": "36500",
+            "selected": true
+          },
+          {
+            "text": "Últimas 24 horas",
+            "value": "1",
+            "selected": false
+          },
+          {
+            "text": "Últimos 7 días",
+            "value": "7",
+            "selected": false
+          },
+          {
+            "text": "Últimos 30 días",
+            "value": "30",
+            "selected": false
+          }
+        ],
+        "current": {
+          "text": "Cuando sea",
+          "value": "36500"
+        }
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "jobpipe",
+        "es"
+      ],
+      "asDropdown": true,
+      "title": "Otros paneles",
+      "includeVars": false,
+      "keepTime": true
+    },
+    {
+      "type": "link",
+      "title": "English",
+      "url": "/d/jobpipe-feed",
+      "icon": "doc",
+      "tooltip": "View in English",
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": false,
+      "asDropdown": false,
+      "tags": []
+    }
+  ],
+  "panels": [
+    {
+      "type": "row",
+      "title": "Resumen",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "id": 1
+    },
+    {
+      "type": "stat",
+      "title": "",
+      "description": "Necesita config/profile.toml; ejecuta jobpipe load después de editarlo.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT count(*) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 30
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "displayName": "Ofertas abiertas para ti",
+          "unit": "locale",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3B82F6",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "id": 2
+    },
+    {
+      "type": "stat",
+      "title": "",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT count(*) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw} AND first_seen > now() - interval '7 days'"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 30
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "displayName": "Nuevas esta semana",
+          "unit": "locale",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5F73F6",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "id": 3
+    },
+    {
+      "type": "stat",
+      "title": "",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT count(*) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw} AND score >= 0.7"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 30
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "displayName": "Buen encaje (70 %+)",
+          "unit": "locale",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#8464F7",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "id": 4
+    },
+    {
+      "type": "stat",
+      "title": "",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT 100 * percentile_cont(0.5) WITHIN GROUP (ORDER BY score) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 30
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "displayName": "Encaje mediano",
+          "unit": "percent",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#A855F7",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "id": 5
+    },
+    {
+      "type": "row",
+      "title": "Ofertas para ti · de mejor a peor encaje",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 1
+      },
+      "id": 6
+    },
+    {
+      "type": "table",
+      "title": "Clic en el puesto para abrir la oferta",
+      "description": "Las ofertas que no nombran ninguna tecnología conocida no tienen encaje y salen al final. El orden favorece las que nombran más de tus tecnologías.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT round(100 * score) AS \"Encaje\", title AS \"Puesto\",\n       company AS \"Empresa\", coalesce(location, country) AS \"Lugar\",\n       array_to_string(ARRAY(SELECT t.label FROM unnest(have) WITH ORDINALITY AS u(key, n) JOIN silver.technologies t USING (key) ORDER BY n), ', ') AS \"Conoces\", array_to_string(ARRAY(SELECT t.label FROM unnest(missing) WITH ORDINALITY AS u(key, n) JOIN silver.technologies t USING (key) ORDER BY n), ', ') AS \"Te falta\",\n       to_char(first_seen, 'YYYY-MM-DD') AS \"Vista\", source AS \"Fuente\", url\nFROM gold.feed\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}\nORDER BY rank DESC, cardinality(have) DESC, first_seen DESC\nLIMIT 300"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "custom": {
+            "align": "auto",
+            "filterable": false,
+            "inspect": false,
+            "minWidth": 70
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Role|Rol"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Puesto"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Abrir oferta",
+                    "url": "${__data.fields.url}",
+                    "targetBlank": true
+                  }
+                ]
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 260
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "url"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Encaje"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Conoces|Te falta"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Encaje"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlPu"
+                }
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 150
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 24,
+        "h": 16
+      },
+      "id": 7
+    },
+    {
+      "type": "row",
+      "title": "Qué aprender",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 1
+      },
+      "id": 8
+    },
+    {
+      "type": "barchart",
+      "title": "Lo que más te falta · % de estas ofertas",
+      "description": "Sobre las ofertas de arriba que nombran al menos una tecnología.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT t.label AS \"Tecnología\",\n       round(100.0 * count(*) / nullif((SELECT count(*) FROM gold.feed WHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw} AND score IS NOT NULL), 0), 1)\n         AS \"Ofertas\"\nFROM gold.feed f\nCROSS JOIN LATERAL unnest(f.missing) AS u(key)\nJOIN silver.technologies t USING (key)\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}\nGROUP BY t.label ORDER BY 2 DESC, 1 LIMIT 15"
+        }
+      ],
+      "options": {
+        "xField": "Tecnología",
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "barWidth": 0.75,
+        "barRadius": 0.2,
+        "xTickLabelRotation": 0,
+        "tooltip": {
+          "mode": "single"
+        },
+        "stacking": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "color": {
+            "mode": "continuous-BlPu"
+          },
+          "custom": {
+            "fillOpacity": 90,
+            "lineWidth": 0,
+            "gradientMode": "scheme"
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 12,
+        "h": 11
+      },
+      "id": 9
+    },
+    {
+      "type": "barchart",
+      "title": "Lo más pedido en estas ofertas",
+      "description": "",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT t.label AS \"Tecnología\",\n       nullif(count(*) FILTER (WHERE u.key = ANY(f.have)), 0) AS \"Conoces\",\n       nullif(count(*) FILTER (WHERE u.key = ANY(f.missing)), 0) AS \"Te falta\"\nFROM gold.feed f\nCROSS JOIN LATERAL unnest(f.have || f.missing) AS u(key)\nJOIN silver.technologies t USING (key)\nWHERE coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND coalesce(score, 0) * 100 >= ${min_match:raw}\n  AND first_seen > now() - interval '1 day' * ${new:raw}\nGROUP BY t.label ORDER BY count(*) DESC, 1 LIMIT 15"
+        }
+      ],
+      "options": {
+        "xField": "Tecnología",
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "barWidth": 0.75,
+        "barRadius": 0.2,
+        "xTickLabelRotation": 0,
+        "tooltip": {
+          "mode": "multi"
+        },
+        "stacking": "normal"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "color": {
+            "mode": "continuous-BlPu"
+          },
+          "custom": {
+            "fillOpacity": 90,
+            "lineWidth": 0,
+            "gradientMode": "none"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Conoces"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3B82F6"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Te falta"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A855F7"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 23,
+        "w": 12,
+        "h": 11
+      },
+      "id": 10
+    }
+  ]
+}

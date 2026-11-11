@@ -14,14 +14,14 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from importlib import resources
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping
 
-from jobpipe import jobs, roles
+from jobpipe import jobs, match, roles, tech
 from jobpipe.bronze import read_records
-from jobpipe.sources import adzuna, levelsfyi
+from jobpipe.sources import adzuna, ats, levelsfyi
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +31,10 @@ DEFAULT_DSN = "postgresql://jobpipe:jobpipe@127.0.0.1:55432/jobpipe"
 
 POSTING_COLUMNS = (
     "source", "source_id", "title", "company", "location", "country", "url",
-    "published", "first_seen", "last_seen", "snapshots", "regions", "role",
+    "published", "first_seen", "last_seen", "snapshots", "is_open", "regions", "role", "technologies",
 )  # fmt: skip
+MATCH_COLUMNS = ("source", "source_id", "fits", "score", "rank", "have", "missing")
+TECHNOLOGY_COLUMNS = ("key", "label", "category")
 SALARY_COLUMNS = ("source", "source_id", "n", "currency", "min_annual", "max_annual", "period", "predicted", "tier")
 HISTOGRAM_COLUMNS = ("country", "category", "what", "bucket_from", "postings", "fetched_at")
 HISTORY_COLUMNS = ("country", "category", "month", "avg_salary", "fetched_at")
@@ -51,6 +53,8 @@ class Tables:
     adzuna_salary_history: list[tuple] = field(default_factory=list)
     levelsfyi_benchmarks: list[tuple] = field(default_factory=list)
     ingest_runs: list[tuple] = field(default_factory=list)
+    technologies: list[tuple] = field(default_factory=list)
+    posting_matches: list[tuple] = field(default_factory=list)
 
     def counts(self) -> dict[str, int]:
         return {name: len(rows) for name, rows in vars(self).items()}
@@ -84,19 +88,71 @@ def _lifetimes(records: Iterable[Mapping[str, Any]]) -> Iterator[_Seen]:
     yield from seen.values()
 
 
-def _postings(data_dir: Path, tables: Tables) -> None:
+# HN threads and Adzuna searches are not complete snapshots, so nothing says
+# when one of their postings is taken down: it counts as open for this long
+# after it was posted.
+OPEN_FOR = timedelta(days=45)
+
+
+@dataclass(frozen=True)
+class Current:
+    """The newest snapshot of a posting, with its history and what it asks for."""
+
+    posting: jobs.Posting
+    first_seen: str
+    last_seen: str
+    snapshots: int
+    is_open: bool
+    role: str
+    technologies: tuple[str, ...]
+
+
+def current_postings(data_dir: Path) -> Iterator[Current]:
+    """Every posting in bronze, once.
+
+    An ATS board is fetched whole, so a posting is open exactly when it was in
+    the newest run that fetched its board. Other sources fall back to OPEN_FOR,
+    counted back from that source's newest fetch rather than from today, so
+    the answer depends only on the data.
+    """
     for source in jobs.SOURCES:
+        found = []
         for seen in _lifetimes(read_records(data_dir, source)):
             posting = jobs.to_posting(source, seen.record)
-            if posting is None:
-                continue
-            tables.postings.append((
-                source, posting.source_id, posting.title, posting.company, posting.location,
-                posting.country, posting.url, _ts(posting.published), _ts(seen.first),
-                _ts(seen.last), seen.snapshots, list(posting.regions), roles.role_of(posting.title),
-            ))  # fmt: skip
-            for n, s in enumerate(dict.fromkeys(map(_salary_key, posting.salaries))):
-                tables.posted_salaries.append((source, posting.source_id, n, *s))
+            if posting is not None:
+                found.append((seen, posting))
+        if not found:
+            continue
+        newest_run: dict[str, str] = {}
+        for seen, _ in found:
+            board = seen.record["payload"].get("board", "")
+            newest_run[board] = max(newest_run.get(board, ""), seen.record.get("run_id", ""))
+        cutoff = (datetime.fromisoformat(max(seen.last for seen, _ in found)) - OPEN_FOR).isoformat()
+        for seen, posting in found:
+            if source in ats.FETCHERS:
+                is_open = seen.record.get("run_id", "") == newest_run[seen.record["payload"].get("board", "")]
+            else:
+                is_open = (posting.published or seen.first) >= cutoff
+            yield Current(
+                posting, seen.first, seen.last, seen.snapshots, is_open, roles.role_of(posting.title),
+                tech.technologies_in(f"{posting.title}\n{posting.description}", posting.company),
+            )
+
+
+def _postings(data_dir: Path, tables: Tables, profile: match.Profile | None) -> None:
+    for current in current_postings(data_dir):
+        posting, source = current.posting, current.posting.source
+        tables.postings.append((
+            source, posting.source_id, posting.title, posting.company, posting.location,
+            posting.country, posting.url, _ts(posting.published), _ts(current.first_seen),
+            _ts(current.last_seen), current.snapshots, current.is_open, list(posting.regions),
+            current.role, list(current.technologies),
+        ))  # fmt: skip
+        for n, s in enumerate(dict.fromkeys(map(_salary_key, posting.salaries))):
+            tables.posted_salaries.append((source, posting.source_id, n, *s))
+        if profile is not None:
+            m = match.match(profile, posting.title, current.role, posting.regions, current.technologies)
+            tables.posting_matches.append((source, posting.source_id, m.fits, m.score, m.rank, list(m.have), list(m.missing)))
 
 
 def _salary_key(salary: Mapping[str, Any]) -> tuple:
@@ -150,9 +206,10 @@ def _runs(data_dir: Path, tables: Tables) -> None:
         tables.ingest_runs.append((source, run_id, ingest_date, records, _ts(first), _ts(last)))
 
 
-def build(data_dir: Path) -> Tables:
-    tables = Tables()
-    _postings(data_dir, tables)
+def build(data_dir: Path, profile: match.Profile | None = None) -> Tables:
+    """Rows for every silver table. Without a profile, nothing is scored."""
+    tables = Tables(technologies=[(t.key, t.label, t.category) for t in tech.CATALOGUE])
+    _postings(data_dir, tables, profile)
     _adzuna_salaries(data_dir, tables)
     _levelsfyi(data_dir, tables)
     _runs(data_dir, tables)
@@ -177,6 +234,8 @@ def write(dsn: str, tables: Tables) -> dict[str, int]:
         "adzuna_salary_history": HISTORY_COLUMNS,
         "levelsfyi_benchmarks": LEVELS_COLUMNS,
         "ingest_runs": RUN_COLUMNS,
+        "technologies": TECHNOLOGY_COLUMNS,
+        "posting_matches": MATCH_COLUMNS,
     }
     with psycopg.connect(dsn) as conn, conn.cursor() as cur:
         cur.execute(schema_sql())

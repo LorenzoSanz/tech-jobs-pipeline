@@ -1,4 +1,4 @@
-"""Command line entry point: ``jobpipe ingest <source>``, board discovery and ``salaries``.
+"""Command line entry point: ``jobpipe ingest <source>``, board discovery, ``salaries`` and ``feed``.
 
 Logs go to stderr; one JSON summary line per bronze write goes to stdout, so a
 scheduler can parse the result of each run.
@@ -13,19 +13,20 @@ import os
 import re
 import sys
 import tomllib
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Sequence
 
 from jobpipe.bronze import BronzeWriter, WriteResult, read_records
 from jobpipe.discovery import REGION_KEYWORDS, discover_from_hn, location_pattern
 from jobpipe.http import HttpClient, HttpError
-from jobpipe import salary
+from jobpipe import match, salary, tech
 from jobpipe.sources import adzuna, ats, hn, levelsfyi
 from jobpipe.verification import render_toml, verify
 
 DEFAULT_DATA_DIR = Path(os.environ.get("JOBPIPE_DATA_DIR", "data/bronze"))
 DEFAULT_BOARDS_FILE = Path("config/boards.toml")
+DEFAULT_PROFILE = Path("config/profile.toml")
 
 
 def _summary(result: WriteResult, **extra: object) -> str:
@@ -184,6 +185,68 @@ def _salaries(args: argparse.Namespace) -> int:
     return 0
 
 
+def _profile(path: Path, required: bool) -> match.Profile | None:
+    if not path.exists():
+        if required:
+            logging.error("no profile at %s: copy config/profile.example.toml and list your skills", path)
+        return None
+    return match.load_profile(path)
+
+
+def _feed(args: argparse.Namespace) -> int:
+    from jobpipe import warehouse
+
+    try:
+        profile = _profile(args.profile, required=True)
+    except match.ProfileError as error:
+        logging.error("%s", error)
+        return 2
+    if profile is None:
+        return 2
+    since = (datetime.now(timezone.utc) - timedelta(days=args.days)).isoformat() if args.days else ""
+    rows = []
+    for current in warehouse.current_postings(args.data_dir):
+        posting = current.posting
+        m = match.match(profile, posting.title, current.role, posting.regions, current.technologies)
+        if current.is_open and m.fits:
+            rows.append((current, m))
+    gaps = match.gaps(m for _, m in rows)
+    shown = [
+        (c, m) for c, m in rows
+        if c.first_seen >= since and (m.score or 0) * 100 >= args.min_score
+    ]  # fmt: skip
+    shown.sort(key=lambda row: (row[1].rank, len(row[1].have), row[0].first_seen), reverse=True)
+    shown = shown[: args.limit]
+    label = {key: t.label for key, t in tech.BY_KEY.items()}
+
+    if args.format == "json":
+        print(json.dumps({
+            "postings": [{
+                "score": m.score, "title": c.posting.title, "company": c.posting.company,
+                "location": c.posting.location, "regions": list(c.posting.regions), "role": c.role,
+                "have": list(m.have), "missing": list(m.missing), "first_seen": c.first_seen,
+                "url": c.posting.url, "source": c.posting.source,
+            } for c, m in shown],
+            "gaps": [{"technology": key, "postings": n, "share": share} for key, n, share in gaps],
+        }, indent=2, ensure_ascii=False))  # fmt: skip
+        return 0
+
+    print(f"{len(rows)} open postings fit your profile; showing {len(shown)}.\n")
+    for c, m in shown:
+        score = f"{m.score:4.0%}" if m.score is not None else "   -"
+        place = ", ".join(filter(None, [c.posting.company, c.posting.location, "/".join(c.posting.regions)]))
+        print(f"{score}  {c.posting.title}" + (f"  ({place})" if place else ""))
+        if m.have or m.missing:
+            known = ", ".join(label[k] for k in m.have) or "-"
+            print(f"      you know: {known}" + (f"  | lacks: {', '.join(label[k] for k in m.missing)}" if m.missing else ""))
+        print(f"      {c.posting.url}  (first seen {c.first_seen[:10]})")
+    if gaps:
+        print("\nWhat you lack most often in these postings:")
+        for key, n, share in gaps[:10]:
+            print(f"  {label[key]:<16} {share:4.0%}  ({n})")
+    return 0
+
+
 def _discover_boards(args: argparse.Namespace) -> int:
     regions = args.region or ["ch"]
     counts = discover_from_hn(
@@ -328,6 +391,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=os.environ.get("JOBPIPE_DATABASE_URL"),
         help="PostgreSQL URL (default: $JOBPIPE_DATABASE_URL or the docker compose database)",
     )
+    load.add_argument(
+        "--profile", type=Path, default=DEFAULT_PROFILE,
+        help=f"your skills and filters, to score postings (default: {DEFAULT_PROFILE}; skipped if missing)",
+    )  # fmt: skip
+
+    feed = commands.add_parser("feed", help="open postings that fit your profile, best match first")
+    feed.add_argument("--profile", type=Path, default=DEFAULT_PROFILE, help=f"default: {DEFAULT_PROFILE}")
+    feed.add_argument("--days", type=int, help="only postings first seen in the last N days")
+    feed.add_argument("--min-score", type=int, default=0, help="minimum match, 0-100")
+    feed.add_argument("--limit", type=int, default=25)
+    feed.add_argument("--format", choices=["text", "json"], default="text")
 
     return parser
 
@@ -335,7 +409,14 @@ def build_parser() -> argparse.ArgumentParser:
 def _load(args: argparse.Namespace) -> int:
     from jobpipe import warehouse
 
-    tables = warehouse.build(args.data_dir)
+    try:
+        profile = _profile(args.profile, required=False)
+    except match.ProfileError as error:
+        logging.error("%s", error)
+        return 2
+    if profile is None:
+        logging.info("no profile at %s: postings are not scored", args.profile)
+    tables = warehouse.build(args.data_dir, profile)
     try:
         counts = warehouse.write(args.dsn or warehouse.DEFAULT_DSN, tables)
     except RuntimeError as error:
@@ -365,6 +446,8 @@ def main(argv: Sequence[str] | None = None, http: HttpClient | None = None) -> i
         return _verify_boards(args, http or HttpClient())
     if args.command == "load":
         return _load(args)
+    if args.command == "feed":
+        return _feed(args)
     return args.handler(args, http or HttpClient(), BronzeWriter(args.data_dir))
 
 
