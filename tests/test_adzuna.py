@@ -47,5 +47,36 @@ class AdzunaTest(unittest.TestCase):
         self.assertNotIn("key-456", repr(item.payload))
 
 
+class AdzunaSalaryTest(unittest.TestCase):
+    def test_histogram_for_each_search_and_category_history(self):
+        transport = FakeTransport()
+        transport.add(body={"histogram": {"80000": "4", "100000": "7"}})
+        transport.add(body={"month": {"2026-10": 101000.5}})
+        query = adzuna.SalaryQuery(country="ch", what="data engineer")
+
+        items = list(adzuna.salary_benchmarks(fast_client(transport), CREDENTIALS, query))
+
+        self.assertEqual([i.payload["kind"] for i in items], ["histogram", "history"])
+        self.assertEqual(items[0].source_id, "ch:histogram:it-jobs:data engineer")
+        self.assertEqual(items[0].payload["histogram"], {"80000": "4", "100000": "7"})
+        self.assertIn("/jobs/ch/histogram?", transport.urls()[0])
+        self.assertEqual(transport.query(0)["what"], "data engineer")
+        self.assertEqual(transport.query(1)["months"], "12")
+        self.assertNotIn("key-456", repr([i.payload for i in items]))
+
+    def test_history_can_be_skipped(self):
+        transport = FakeTransport()
+        transport.add(body={"histogram": {}})
+
+        items = list(
+            adzuna.salary_benchmarks(
+                fast_client(transport), CREDENTIALS, adzuna.SalaryQuery(history_months=0)
+            )
+        )
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(len(transport.requests), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

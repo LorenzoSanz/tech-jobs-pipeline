@@ -90,6 +90,64 @@ class CliTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn('[lever]\nboards = [\n  "acme",  # 1\n]', out)
 
+    def test_salaries_reports_posted_ranges_per_currency(self):
+        job = {
+            "id": "a1",
+            "title": "Backend Engineer",
+            "location": "Zurich",
+            "compensation": {
+                "summaryComponents": [
+                    {"compensationType": "Salary", "currencyCode": "CHF", "interval": "1 YEAR",
+                     "minValue": 120000, "maxValue": 150000}
+                ]
+            },
+        }  # fmt: skip
+        BronzeWriter(self.data_dir).write("ashby", [RawItem("acme:a1", {"board": "acme", "job": job})])
+
+        code, out = self.run_cli("salaries", "--region", "ch", "--title", "backend")
+        _, as_json = self.run_cli("salaries", "--format", "json", "--region", "es")
+
+        self.assertEqual(code, 0)
+        self.assertIn("## CHF - 1 postings", out)
+        self.assertIn("120k-150k  acme | Backend Engineer | Zurich", out)
+        self.assertEqual(json.loads(as_json)["postings"], {})
+
+    def test_ingest_adzuna_salaries_one_run_per_search(self):
+        transport = FakeTransport()
+        transport.add(body={"histogram": {"90000": "3"}})
+        transport.add(body={"month": {"2026-10": 100000}})
+        transport.add(body={"histogram": {"110000": "2"}})
+        env = {"ADZUNA_APP_ID": "id", "ADZUNA_APP_KEY": "key"}
+
+        with mock.patch.dict(os.environ, env, clear=True):
+            code, out = self.run_cli(
+                "ingest", "adzuna-salaries", "--what", "data engineer", "--what", "sre",
+                transport=transport,
+            )  # fmt: skip
+
+        self.assertEqual(code, 0)
+        summaries = [json.loads(line) for line in out.splitlines()]
+        self.assertEqual([(s["what"], s["records"]) for s in summaries], [("data engineer", 2), ("sre", 1)])
+
+    def test_levelsfyi_requires_an_official_api_key(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            code, out = self.run_cli("ingest", "levelsfyi", "--location", "zurich-area")
+            lookup_code, _ = self.run_cli("levelsfyi-lookup", "locations", "zurich")
+
+        self.assertEqual((code, lookup_code, out), (2, 2, ""))
+
+    def test_ingest_levelsfyi_writes_benchmarks(self):
+        transport = FakeTransport()
+        transport.add(body=[{"locationName": "Zurich", "locationSlug": "zurich-area", "p10": 1,
+                             "p25": 2, "p50": 3, "p75": 4, "p90": 5, "sampleSize": 8}])  # fmt: skip
+        transport.add(body=[])
+
+        with mock.patch.dict(os.environ, {"LEVELS_FYI_API_KEY": "k"}, clear=True):
+            code, out = self.run_cli("ingest", "levelsfyi", "--location", "zurich-area", transport=transport)
+
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out)["records"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

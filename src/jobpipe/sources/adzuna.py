@@ -1,4 +1,4 @@
-"""Adzuna job search API for Switzerland.
+"""Adzuna job search API, per country (ch, es, de, nl, ...).
 
 An aggregator: it adds breadth (many employers that do not use a public ATS)
 at the cost of truncated descriptions and duplicates across boards, which the
@@ -67,3 +67,67 @@ def ingest(http: HttpClient, credentials: AdzunaCredentials, query: AdzunaQuery)
             )
         if len(results) < RESULTS_PER_PAGE:
             return
+
+
+SALARY_SOURCE = "adzuna_salary"
+
+
+@dataclass(frozen=True)
+class SalaryQuery:
+    """A salary benchmark: Adzuna's distribution of advertised salaries for a search."""
+
+    country: str = "ch"
+    what: str | None = None
+    category: str | None = "it-jobs"
+    history_months: int = 12
+
+
+def _auth(credentials: AdzunaCredentials) -> dict[str, object]:
+    return {
+        "app_id": credentials.app_id,
+        "app_key": credentials.app_key,
+        "content-type": "application/json",
+    }
+
+
+def salary_benchmarks(
+    http: HttpClient, credentials: AdzunaCredentials, query: SalaryQuery
+) -> Iterator[RawItem]:
+    """The salary histogram for a search, and the category's monthly average salary.
+
+    Both are official Adzuna endpoints. The histogram answers "how many current
+    postings advertise 60-70k for 'data engineer' in Switzerland", which is the
+    market range to anchor a negotiation on. ``history`` takes a category, not
+    keywords, so it is the trend of the whole category.
+    """
+    params = _auth(credentials)
+    histogram_params = dict(params)
+    if query.what:
+        histogram_params["what"] = query.what
+    if query.category:
+        histogram_params["category"] = query.category
+    histogram = http.get_json(f"{API}/{query.country}/histogram", histogram_params)
+    key = f"{query.country}:histogram:{query.category or ''}:{query.what or ''}"
+    yield RawItem(
+        source_id=key,
+        payload={
+            "kind": "histogram",
+            "country": query.country,
+            "what": query.what,
+            "category": query.category,
+            "histogram": histogram.get("histogram") or {},
+        },
+    )
+
+    if query.history_months > 0 and query.category:
+        history_params = dict(params, category=query.category, months=query.history_months)
+        history = http.get_json(f"{API}/{query.country}/history", history_params)
+        yield RawItem(
+            source_id=f"{query.country}:history:{query.category}",
+            payload={
+                "kind": "history",
+                "country": query.country,
+                "category": query.category,
+                "month": history.get("month") or {},
+            },
+        )
