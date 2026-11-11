@@ -10,8 +10,9 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any, Iterable, Mapping
+from typing import Any
 from xml.etree import ElementTree
 
 from jobpipe.http import HttpClient, HttpError

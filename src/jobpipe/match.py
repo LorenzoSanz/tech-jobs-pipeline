@@ -17,9 +17,10 @@ from __future__ import annotations
 import re
 import tomllib
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Any
 
 from jobpipe import employers, roles, seniority, tech
 
@@ -59,7 +60,7 @@ class Match:
         return (len(self.have) + 1) / (len(self.have) + len(self.missing) + 3)
 
 
-def _keys(data: dict, name: str, valid: Iterable[str]) -> frozenset[str]:
+def _keys(data: dict[str, Any], name: str, valid: Iterable[str]) -> frozenset[str]:
     values = data.get(name, [])
     if not isinstance(values, list):
         raise ProfileError(f"{name} must be a list")

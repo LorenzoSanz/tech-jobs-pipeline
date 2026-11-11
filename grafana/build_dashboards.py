@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from jobpipe import employers, roles, seniority, tech  # noqa: E402
+from jobpipe import employers, roles, seniority, tech
 
 OUT = Path(sys.argv[1])
 DS = {"type": "grafana-postgresql-datasource", "uid": "jobpipe-pg"}
@@ -34,14 +34,14 @@ def ramp(n, start=BLUE, end=PURPLE):
     """n colours evenly spaced from blue to purple."""
     a, b = (tuple(int(c[i : i + 2], 16) for i in (1, 3, 5)) for c in (start, end))
     steps = [i / (n - 1) if n > 1 else 0 for i in range(n)]
-    return ["#" + "".join(f"{round(x + (y - x) * t):02X}" for x, y in zip(a, b)) for t in steps]
+    return ["#" + "".join(f"{round(x + (y - x) * t):02X}" for x, y in zip(a, b, strict=True)) for t in steps]
 
 
 # Region filter: postings with no detected region count as 'other'.
 REGION_SQL = "coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]"
 REGIONS = {"ch": ("Switzerland", "Suiza"), "es": ("Spain", "España"), "eu": ("Rest of Europe", "Resto de Europa"),
            "other": ("Other / unknown", "Otras / sin región")}  # fmt: skip
-REGION_COLORS = dict(zip(REGIONS, [BLUE, PURPLE, SKY, LAVENDER]))
+REGION_COLORS = dict(zip(REGIONS, [BLUE, PURPLE, SKY, LAVENDER], strict=True))
 TIER_SQL = "company_tier IN ($tier)"
 SOURCES = ("hn", "greenhouse", "lever", "ashby", "smartrecruiters", "workable", "recruitee", "personio",
            "adzuna", "adzuna_salary", "levelsfyi")
@@ -112,7 +112,7 @@ def table(title, sql, description="", overrides=None, money=None, bars=None):
         "table", title, sql, description=description,
         options={"showHeader": True, "cellHeight": "md", "footer": {"show": False}},
         defaults={"custom": {"align": "auto", "filterable": False, "inspect": False, "minWidth": 70}},
-        overrides=[by_regex("Role|Rol", ("custom.minWidth", 180))] + overrides,
+        overrides=[by_regex("Role|Rol", ("custom.minWidth", 180)), *overrides],
     )
 
 
@@ -326,7 +326,7 @@ def build(lang):
             stat(t("Median match", "Encaje mediano"),
                  f"SELECT 100 * percentile_cont(0.5) WITHIN GROUP (ORDER BY score) FROM gold.feed WHERE {feed_where}",
                  unit="percent"),
-        )  # fmt: skip
+        )
         .section(t("Postings for you · best match first", "Ofertas para ti · de mejor a peor encaje"))
         .line(
             16,
@@ -341,13 +341,11 @@ FROM gold.feed
 WHERE {feed_where}
 ORDER BY rank DESC, cardinality(have) DESC, first_seen DESC
 LIMIT 300
-""", overrides=link_to_posting(open_posting, t("Title", "Puesto"))
-                  + [by_name(t("Match", "Encaje"), ("unit", "percent"), ("min", 0), ("max", 100)),
-                     by_regex(f"{know}|{lack}", ("custom.minWidth", 200))],
+""", overrides=[*link_to_posting(open_posting, t("Title", "Puesto")), by_name(t("Match", "Encaje"), ("unit", "percent"), ("min", 0), ("max", 100)), by_regex(f"{know}|{lack}", ("custom.minWidth", 200))],
                   bars=t("Match", "Encaje"),
                   description=t("Postings that name no known technology have no match and come last. Ranking favours postings that name more of your skills.",
                                 "Las ofertas que no nombran ninguna tecnología conocida no tienen encaje y salen al final. El orden favorece las que nombran más de tus tecnologías.")),
-        )  # fmt: skip
+        )
         .section(t("What to learn", "Qué aprender"))
         .line(
             CHART_H + 2,
@@ -375,7 +373,7 @@ JOIN silver.technologies t USING (key)
 WHERE {feed_where}
 GROUP BY t.label ORDER BY count(*) DESC, 1 LIMIT 15
 """, x=t("Technology", "Tecnología"), horizontal=True, colors={know: BLUE, lack: PURPLE}),
-        ),  # fmt: skip
+        ),
     )
 
     # ------------------------------------------------------------------------- salaries
@@ -436,7 +434,7 @@ currency = ${{currency:sqlstring}}
                                                "Porcentaje de ofertas cuyo punto medio es menor o igual que tu oferta."),
                  steps=[{"color": FUCHSIA, "value": None}, {"color": PURPLE, "value": 25},
                         {"color": INDIGO, "value": 50}, {"color": BLUE, "value": 75}]),
-        )  # fmt: skip
+        )
         .section(t("Distribution", "Distribución"))
         .line(
             CHART_H,
@@ -476,7 +474,7 @@ GROUP BY company_tier ORDER BY 4 DESC
 """, money=f"p25|{t('Median', 'Mediana')}|p75", bars=t("Median", "Mediana"),
                   description=t("What big tech posts compared with everyone else, in the chosen currency.",
                                 "Lo que publican las big tech frente al resto, en la moneda elegida.")),
-        )  # fmt: skip
+        )
         .section(t("Best-paying postings", "Ofertas mejor pagadas"))
         .line(
             TABLE_H,
@@ -491,7 +489,7 @@ FROM gold.salaries WHERE {where}
 ORDER BY max_annual DESC LIMIT 100
 """, overrides=link_to_posting(open_posting, t("Title", "Puesto")),
                   money=f"{t('Min', 'Mínimo')}|{t('Max', 'Máximo')}", bars=t("Max", "Máximo")),
-        )  # fmt: skip
+        )
         .section(t("External benchmarks", "Referencias externas"))
         .line(
             CHART_H,
@@ -510,7 +508,7 @@ FROM silver.adzuna_salary_history ORDER BY 1
 """, style="line", shades=VIOLET,
                        description=t("Average for the whole category; Adzuna does not give it per keyword. Jobs by Adzuna.",
                                      "Media de la categoría completa; Adzuna no la da por palabra clave. Jobs by Adzuna.")),
-        )  # fmt: skip
+        )
         .line(
             CHART_H,
             table(t("Levels.fyi · actual pay by location (USD)", "Levels.fyi · compensación real por ubicación (USD)"),
@@ -524,7 +522,7 @@ ORDER BY location, kind DESC, yoe_range
 """, money=f"p25|{t('Median', 'Mediana')}|p75|p90", bars=t("Median", "Mediana"),
                   description=t("Data source: Levels.fyi (https://www.levels.fyi). Only with the official API (LEVELS_FYI_API_KEY).",
                                 "Data source: Levels.fyi (https://www.levels.fyi). Solo con la API oficial (LEVELS_FYI_API_KEY).")),
-        ),  # fmt: skip
+        ),
     )
 
     # ------------------------------------------------------------------------- market
@@ -576,7 +574,7 @@ ORDER BY location, kind DESC, yoe_range
             stat(t("With a stated salary", "Con salario publicado"),
                  f"SELECT 100.0 * count(*) FILTER (WHERE {has_salary}) / nullif(count(*), 0) FROM gold.jobs p WHERE {posting_where}",
                  unit="percent", decimals=1),
-        )  # fmt: skip
+        )
         .section(t("Trend", "Tendencia"))
         .line(
             CHART_H,
@@ -590,7 +588,7 @@ GROUP BY 1, region ORDER BY 1
 """, colors={region_names[c]: REGION_COLORS[c] for c in REGIONS},
                        description=t("Publication date from the source, or the first time it was seen. HN goes back to 2011.",
                                      "Fecha de publicación según la fuente; si no la da, la primera vez que se vio. HN aporta la historia desde 2011.")),
-        )  # fmt: skip
+        )
         .section(t("Who is hiring (90 days)", "Quién contrata (90 días)"))
         .line(
             CHART_H,
@@ -618,7 +616,7 @@ GROUP BY seniority ORDER BY {level_order}
 """, x=t("Seniority", "Nivel"), horizontal=True,
                      description=t("From the job title. Most titles do not state it.",
                                    "Deducido del título. La mayoría de títulos no lo indican.")),
-        )  # fmt: skip
+        )
         .section(t("Big tech (open jobs)", "Big tech (ofertas abiertas)"))
         .line(
             CHART_H + 2,
@@ -646,7 +644,7 @@ FROM gold.jobs
 WHERE is_open AND {big_tech_where}
 ORDER BY posted_at DESC NULLS LAST LIMIT 200
 """, overrides=link_to_posting(open_posting, t("Title", "Puesto"))),
-        )  # fmt: skip
+        )
         .section(t("Technologies", "Tecnologías"))
         .line(
             CHART_H + 2,
@@ -672,10 +670,10 @@ FROM gold.jobs p
 CROSS JOIN silver.technologies t
 WHERE t.key IN ($technology) AND {posting_where} AND $__timeFilter(p.posted_at)
 GROUP BY 1, 2 HAVING count(*) >= 10 ORDER BY 1
-""", style="line", unit="percent", colors=dict(zip(["Python", "SQL", "Kafka", "dbt"], [BLUE, INDIGO, PURPLE, FUCHSIA])),
+""", style="line", unit="percent", colors=dict(zip(["Python", "SQL", "Kafka", "dbt"], [BLUE, INDIGO, PURPLE, FUCHSIA], strict=True)),
                        description=t("Months with fewer than 10 postings are left out. HN goes back to 2011; the other sources only have what was open when collected.",
                                      "Se omiten los meses con menos de 10 ofertas. HN llega hasta 2011; las demás fuentes solo tienen lo que estaba abierto al recogerlas.")),
-        )  # fmt: skip
+        )
         .section(t("Postings", "Ofertas"))
         .line(
             16,
@@ -695,7 +693,7 @@ WHERE {posting_where}
   AND (NOT ${{with_salary:raw}} OR {has_salary})
 ORDER BY 1 DESC NULLS LAST LIMIT 500
 """, overrides=link_to_posting(open_posting, t("Title", "Puesto"))),
-        ),  # fmt: skip
+        ),
     )
 
     # ------------------------------------------------------------------------- pipeline
@@ -726,7 +724,7 @@ ORDER BY 1 DESC NULLS LAST LIMIT 500
                  unit="percent", decimals=1,
                  description=t("Share of postings whose location was understood, HN left out. See src/jobpipe/places.py.",
                                "Porcentaje de ofertas cuya ubicación se ha entendido, sin contar HN. Ver src/jobpipe/places.py.")),
-        )  # fmt: skip
+        )
         .section(t("By source", "Por fuente"))
         .line(
             CHART_H,
@@ -742,8 +740,8 @@ SELECT coalesce(last_fetched, ingest_date::timestamptz) AS time, source AS metri
 FROM silver.ingest_runs
 WHERE $__timeFilter(coalesce(last_fetched, ingest_date::timestamptz))
 ORDER BY 1
-""", style="points", colors=dict(zip(SOURCES, ramp(len(SOURCES), SKY, FUCHSIA)))),
-        ),  # fmt: skip
+""", style="points", colors=dict(zip(SOURCES, ramp(len(SOURCES), SKY, FUCHSIA), strict=True))),
+        ),
     )
     return {"feed": feed, "salaries": salaries, "market": market, "pipeline": pipeline}
 

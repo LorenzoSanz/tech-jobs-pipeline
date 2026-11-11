@@ -19,9 +19,10 @@ from __future__ import annotations
 import html
 import re
 import statistics
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Mapping
+from typing import Any
 
 from jobpipe.bronze import read_records
 from jobpipe.discovery import REGION_KEYWORDS
@@ -116,10 +117,7 @@ def plain_text(text: str) -> str:
 
 
 def _number(raw: str, thousands: bool) -> float:
-    if re.fullmatch(r"\d{1,3}(?:[,.'’ ]\d{3})+", raw):
-        value = float(re.sub(r"[,.'’ ]", "", raw))
-    else:
-        value = float(raw)
+    value = float(re.sub(r"[,.'’ ]", "", raw)) if re.fullmatch(r"\d{1,3}(?:[,.'’ ]\d{3})+", raw) else float(raw)
     return value * 1000 if thousands else value
 
 
@@ -288,13 +286,19 @@ def _hn(record: Mapping[str, Any]) -> Iterator[PostedSalary]:
     yield from _from_text(record, header[:200], company, header, None, text, url)
 
 
-def _from_text(record, title, company, location, country, text, url) -> Iterator[PostedSalary]:
+def _from_text(
+    record: Mapping[str, Any], title: str | None, company: str | None, location: str | None,
+    country: str | None, text: str, url: str | None,
+) -> Iterator[PostedSalary]:
     for currency, low, high, period in dict.fromkeys(ranges_in_text(text)):
         yield _posted(record, title, company, location, country, currency, (low, high), period, url=url)
 
 
-def _posted(record, title, company, location, country, currency, annual, period, *,
-            predicted=False, tier=None, url=None) -> PostedSalary:  # fmt: skip
+def _posted(
+    record: Mapping[str, Any], title: str | None, company: str | None, location: str | None,
+    country: str | None, currency: str, annual: tuple[float, float], period: str, *,
+    predicted: bool = False, tier: str | None = None, url: str | None = None,
+) -> PostedSalary:
     return PostedSalary(
         source=record["source"], source_id=record["source_id"], company=company, title=title,
         location=location, country=country, currency=currency.upper(), min_annual=annual[0],

@@ -1,5 +1,4 @@
 import unittest
-
 from datetime import date
 
 from jobpipe.discovery import discover_from_hn, extract_boards, location_pattern

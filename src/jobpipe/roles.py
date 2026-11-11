@@ -53,7 +53,7 @@ FAMILIES: tuple[Family, ...] = (
            r"engineer|developer|programmer|software|\bdev\b"),
 )  # fmt: skip
 OTHER = Family("other", "Other (non-tech)", "Otros (no técnicos)")
-ALL = FAMILIES + (OTHER,)
+ALL = (*FAMILIES, OTHER)
 
 _COMPILED = tuple((family.key, re.compile(family.pattern, re.IGNORECASE)) for family in FAMILIES)
 

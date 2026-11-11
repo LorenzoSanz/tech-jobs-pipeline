@@ -15,14 +15,15 @@ import re
 import sys
 import tomllib
 import zipfile
-from datetime import date, datetime, timedelta, timezone
+from collections.abc import Callable, Sequence
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
+from jobpipe import cv, employers, match, salary, tech
 from jobpipe.bronze import BronzeWriter, WriteResult, read_records
 from jobpipe.discovery import REGION_KEYWORDS, discover_from_hn, location_pattern
 from jobpipe.http import HttpClient, HttpError
-from jobpipe import cv, employers, match, salary, tech
 from jobpipe.sources import adzuna, ats, hn, levelsfyi
 from jobpipe.verification import render_toml, verify
 
@@ -32,6 +33,8 @@ if TYPE_CHECKING:
 DEFAULT_DATA_DIR = Path(os.environ.get("JOBPIPE_DATA_DIR", "data/bronze"))
 DEFAULT_BOARDS_FILE = Path("config/boards.toml")
 DEFAULT_PROFILE = Path("config/profile.toml")
+
+log = logging.getLogger("jobpipe")
 
 
 def _summary(result: WriteResult, **extra: object) -> str:
@@ -67,7 +70,7 @@ def _ingest_ats(args: argparse.Namespace, http: HttpClient, writer: BronzeWriter
         failed += len(failures)
         print(_summary(result, boards=len(boards), failed_boards=[f.board for f in failures]))
     if attempted == 0:
-        logging.error("no boards configured in %s", args.boards)
+        log.error("no boards configured in %s", args.boards)
         return 2
     return 1 if failed == attempted else 0
 
@@ -76,7 +79,7 @@ def _adzuna_credentials() -> adzuna.AdzunaCredentials | None:
     app_id = os.environ.get("ADZUNA_APP_ID")
     app_key = os.environ.get("ADZUNA_APP_KEY")
     if not app_id or not app_key:
-        logging.error("set ADZUNA_APP_ID and ADZUNA_APP_KEY (free key at developer.adzuna.com)")
+        log.error("set ADZUNA_APP_ID and ADZUNA_APP_KEY (free key at developer.adzuna.com)")
         return None
     return adzuna.AdzunaCredentials(app_id, app_key)
 
@@ -98,7 +101,7 @@ def _ingest_adzuna(args: argparse.Namespace, http: HttpClient, writer: BronzeWri
         try:
             result = writer.write("adzuna", adzuna.ingest(http, credentials, query))
         except HttpError as error:
-            logging.error("adzuna %s failed: %s", country, error)
+            log.error("adzuna %s failed: %s", country, error)
             failed += 1
             continue
         print(_summary(result, country=country))
@@ -126,7 +129,7 @@ def _ingest_adzuna_salaries(args: argparse.Namespace, http: HttpClient, writer: 
         try:
             result = writer.write(adzuna.SALARY_SOURCE, adzuna.salary_benchmarks(http, credentials, query))
         except HttpError as error:
-            logging.error("adzuna salaries %s %r failed: %s", query.country, query.what, error)
+            log.error("adzuna salaries %s %r failed: %s", query.country, query.what, error)
             failed += 1
             continue
         print(_summary(result, country=query.country, what=query.what))
@@ -136,7 +139,7 @@ def _ingest_adzuna_salaries(args: argparse.Namespace, http: HttpClient, writer: 
 def _levelsfyi_key() -> str | None:
     key = os.environ.get("LEVELS_FYI_API_KEY")
     if not key:
-        logging.error(
+        log.error(
             "set LEVELS_FYI_API_KEY (employer key: levels.fyi/api-access). Without one, look up "
             "Levels.fyi by hand or through its free MCP server; scraping the site breaks its terms."
         )
@@ -193,7 +196,7 @@ def _salaries(args: argparse.Namespace) -> int:
 def _profile(path: Path, required: bool) -> match.Profile | None:
     if not path.exists():
         if required:
-            logging.error("no profile at %s: copy config/profile.example.toml and list your skills", path)
+            log.error("no profile at %s: copy config/profile.example.toml and list your skills", path)
         return None
     return match.load_profile(path)
 
@@ -217,13 +220,13 @@ def _feed(args: argparse.Namespace) -> int:
     try:
         profile = _profile(args.profile, required=True)
     except match.ProfileError as error:
-        logging.error("%s", error)
+        log.error("%s", error)
         return 2
     if profile is None:
         return 2
     if args.tier:
         profile = dataclasses.replace(profile, company_tiers=frozenset(args.tier))
-    since = (datetime.now(timezone.utc) - timedelta(days=args.days)).isoformat() if args.days else ""
+    since = (datetime.now(UTC) - timedelta(days=args.days)).isoformat() if args.days else ""
     rows = _fitting(args.data_dir, profile)
     gaps = match.gaps(m for _, m, _ in rows)
     shown = [
@@ -270,12 +273,12 @@ def _cv(args: argparse.Namespace) -> int:
     try:
         profile = _profile(args.profile, required=True)
     except match.ProfileError as error:
-        logging.error("%s", error)
+        log.error("%s", error)
         return 2
     if profile is None:
         return 2
     if not args.cv and not args.linkedin:
-        logging.error("give --cv, --linkedin or both (keep them in private/, which git ignores)")
+        log.error("give --cv, --linkedin or both (keep them in private/, which git ignores)")
         return 2
     if args.tier:
         profile = dataclasses.replace(profile, company_tiers=frozenset(args.tier))
@@ -286,7 +289,7 @@ def _cv(args: argparse.Namespace) -> int:
         if args.linkedin:
             documents["LinkedIn"] = "\n".join(cv.read_linkedin(args.linkedin).values())
     except (OSError, ValueError, KeyError, zipfile.BadZipFile) as error:
-        logging.error("%s", error)
+        log.error("%s", error)
         return 2
     rows = _fitting(args.data_dir, profile)
     wanted = cv.demand((c.posting.title, c.technologies) for c, _, _ in rows)
@@ -320,7 +323,7 @@ def _verify_boards(args: argparse.Namespace, http: HttpClient) -> int:
     checks = verify(http, boards, location_pattern(args.region or ["ch"]))
     print(render_toml(checks), end="")
     kept = sum(check.keep for check in checks)
-    logging.info("kept %d of %d boards", kept, len(checks))
+    log.info("kept %d of %d boards", kept, len(checks))
     return 0 if kept else 1
 
 
@@ -477,18 +480,18 @@ def _load(args: argparse.Namespace) -> int:
     try:
         profile = _profile(args.profile, required=False)
     except match.ProfileError as error:
-        logging.error("%s", error)
+        log.error("%s", error)
         return 2
     if profile is None:
-        logging.info("no profile at %s: postings are not scored", args.profile)
+        log.info("no profile at %s: postings are not scored", args.profile)
     tables = warehouse.build(args.data_dir, profile)
     try:
         counts = warehouse.write(args.dsn or warehouse.DEFAULT_DSN, tables)
     except RuntimeError as error:
-        logging.error("%s", error)
+        log.error("%s", error)
         return 2
-    except Exception as error:  # psycopg.OperationalError and friends
-        logging.error("load failed: %s", error)
+    except Exception as error:  # noqa: BLE001 - psycopg.OperationalError and friends: report, do not crash
+        log.error("load failed: %s", error)
         return 1
     print(json.dumps({"loaded": counts}))
     return 0
@@ -520,7 +523,8 @@ def main(argv: Sequence[str] | None = None, http: HttpClient | None = None) -> i
         return _feed(args)
     if args.command == "cv":
         return _cv(args)
-    return args.handler(args, http or HttpClient(), BronzeWriter(args.data_dir))
+    handler: Callable[[argparse.Namespace, HttpClient, BronzeWriter], int] = args.handler
+    return handler(args, http or HttpClient(), BronzeWriter(args.data_dir))
 
 
 if __name__ == "__main__":

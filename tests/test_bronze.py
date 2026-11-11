@@ -1,12 +1,12 @@
 import json
 import tempfile
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from jobpipe.bronze import BronzeWriter, RawItem, payload_hash, read_records
 
-T0 = datetime(2026, 11, 9, 8, 15, tzinfo=timezone.utc)
+T0 = datetime(2026, 11, 9, 8, 15, tzinfo=UTC)
 
 
 class StepClock:
@@ -30,7 +30,7 @@ class BronzeWriterTest(unittest.TestCase):
 
     def test_writes_one_envelope_per_item_in_a_dated_partition(self):
         items = [
-            RawItem("acme:1", {"title": "Backend Engineer"}, datetime(2026, 10, 1, tzinfo=timezone.utc)),
+            RawItem("acme:1", {"title": "Backend Engineer"}, datetime(2026, 10, 1, tzinfo=UTC)),
             RawItem("acme:2", {"title": "Platform Engineer"}),
         ]
 

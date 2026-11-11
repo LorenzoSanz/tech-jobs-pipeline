@@ -1,7 +1,7 @@
 import re
 import tempfile
 import unittest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from jobpipe import salary
@@ -9,7 +9,7 @@ from jobpipe.bronze import BronzeWriter, RawItem
 
 
 def write(root: Path, source: str, items: list[RawItem], day: int = 10) -> None:
-    clock = lambda: datetime(2026, 11, day, 8, tzinfo=timezone.utc)  # noqa: E731
+    clock = lambda: datetime(2026, 11, day, 8, tzinfo=UTC)  # noqa: E731
     BronzeWriter(root, clock=clock).write(source, items)
 
 

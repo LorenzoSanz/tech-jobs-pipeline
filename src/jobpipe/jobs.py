@@ -8,10 +8,11 @@ layer: postings of the same job are grouped later, see dedup.py.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator, Mapping
+from typing import Any
 
 from jobpipe import places, salary
 from jobpipe.bronze import read_records
@@ -184,7 +185,7 @@ def load(data_dir: Path, sources: Iterable[str] = SOURCES, hn_days: int | None =
     """Every posting, newest first. HN is cut to the last ``hn_days`` (it goes back to 2011)."""
     cutoff = None
     if hn_days is not None:
-        cutoff = (datetime.now(timezone.utc) - timedelta(days=hn_days)).isoformat()
+        cutoff = (datetime.now(UTC) - timedelta(days=hn_days)).isoformat()
     postings: list[Posting] = []
     for source in sources:
         records = salary.latest(read_records(data_dir, source))

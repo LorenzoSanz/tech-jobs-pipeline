@@ -25,8 +25,9 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
-from typing import Any, Sequence
+from collections.abc import Sequence
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from jobpipe import employers, jobs, places
 
@@ -51,17 +52,23 @@ CITY_NAMES = re.compile(
 
 
 def title_key(title: str | None) -> str:
-    text = WORK_MODE.sub(" ", GENDER.sub(" ", title or ""))
-    text = CITY_NAMES.sub(" ", places.fold(text))
-    return " ".join(re.sub(r"[^a-z0-9+#]+", " ", text).split())
+    """Repeated until nothing changes: dropping punctuation can reveal another marker ("FULL:TIME")."""
+    text = title or ""
+    while True:
+        key = WORK_MODE.sub(" ", GENDER.sub(" ", text))
+        key = CITY_NAMES.sub(" ", places.fold(key))
+        key = " ".join(re.sub(r"[^a-z0-9+#]+", " ", key).split())
+        if key == text:
+            return key
+        text = key
 
 
 def _time(value: str | None) -> datetime:
     moment = datetime.fromisoformat(value) if value else datetime.min
-    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+    return moment if moment.tzinfo else moment.replace(tzinfo=UTC)
 
 
-def _preference(item: Any) -> tuple:
+def _preference(item: Any) -> tuple[Any, ...]:
     posting = item.posting
     return (
         not item.is_open,
@@ -79,7 +86,7 @@ def group(items: Sequence[Any]) -> list[tuple[str, int]]:
     Items need ``posting`` (a jobs.Posting), ``first_seen``, ``last_seen`` and
     ``is_open``. The job id is "source:source_id" of its rank 0 posting.
     """
-    by_key: dict[tuple, list[int]] = defaultdict(list)
+    by_key: dict[tuple[Any, ...], list[int]] = defaultdict(list)
     for n, item in enumerate(items):
         posting = item.posting
         employer = employers.employer_of(posting.company)

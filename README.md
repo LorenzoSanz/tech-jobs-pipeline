@@ -185,12 +185,44 @@ to local-only values; copy `.env.example` to `.env` to change them.
 ## Development
 
 ```bash
+pip install -e .[dev]    # ruff, mypy and hypothesis, pinned
+ruff check src tests grafana benchmarks
+mypy                     # --strict, configured in pyproject.toml
 PYTHONPATH=src python -m unittest discover -s tests -t .
 
 # Against PostgreSQL too: loads a fixture into the jobpipe_test database
 # (never the real one) and runs every dashboard query
 JOBPIPE_TEST_DATABASE_URL=postgresql://jobpipe:jobpipe@127.0.0.1:55432/jobpipe_test \
   PYTHONPATH=src python -m unittest tests.test_warehouse
+```
+
+`tests/test_properties.py` checks rules that must hold for any input with
+Hypothesis: every title gets a known level and role, title normalisation is
+stable, grouping into jobs does not depend on input order, salary ranges stay
+ordered. It found that "Data Engineer, FULL:TIME" was not recognised as
+"Data Engineer".
+
+### Load benchmark
+
+`benchmarks/load.py` writes synthetic bronze (three daily runs, a tenth of
+the postings replaced each day, a quarter also on Adzuna) and times a load:
+
+| Open postings | Bronze records | Build (Python) | Write (PostgreSQL) |
+| ---: | ---: | ---: | ---: |
+| 2,000 | 7,500 | 0.8 s | 0.3 s |
+| 10,000 | 37,500 | 4.2 s | 0.5 s |
+| 50,000 | 187,500 | 21.3 s | 2.1 s |
+
+About 8,800 records per second on a laptop, linear in the size of bronze; the
+real data today is about 2,000 postings. Finding technologies took three
+quarters of the build (80 regular expressions over every description) until
+each one was given plain words to look for first: a substring test skips most
+of them, and the build of 2,000 postings went from 3.1 s to 0.8 s with the same
+result, which a property test checks.
+
+```bash
+PYTHONPATH=src python benchmarks/load.py --postings 2000 10000 50000 \
+  --dsn postgresql://jobpipe:jobpipe@127.0.0.1:55432/jobpipe_test
 ```
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/);

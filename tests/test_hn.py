@@ -1,12 +1,12 @@
 import unittest
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from jobpipe.sources import hn
 from tests.fakes import FakeTransport, fast_client
 
 
 def ts(year: int, month: int, day: int) -> int:
-    return int(datetime(year, month, day, 16, tzinfo=timezone.utc).timestamp())
+    return int(datetime(year, month, day, 16, tzinfo=UTC).timestamp())
 
 
 def story_hit(object_id: str, title: str, created: int) -> dict:
@@ -56,7 +56,7 @@ class FindHiringThreadsTest(unittest.TestCase):
 
 class FetchPostingsTest(unittest.TestCase):
     def test_yields_live_top_level_comments_with_their_own_timestamp(self):
-        thread = hn.HiringThread(200, "Ask HN: Who is hiring? (October 2026)", datetime(2026, 10, 1, tzinfo=timezone.utc))
+        thread = hn.HiringThread(200, "Ask HN: Who is hiring? (October 2026)", datetime(2026, 10, 1, tzinfo=UTC))
         transport = FakeTransport()
         transport.add(
             body={
@@ -79,7 +79,7 @@ class FetchPostingsTest(unittest.TestCase):
         self.assertEqual(len(items), 1)
         item = items[0]
         self.assertEqual(item.source_id, "201")
-        self.assertEqual(item.event_time, datetime(2026, 10, 3, 16, tzinfo=timezone.utc))
+        self.assertEqual(item.event_time, datetime(2026, 10, 3, 16, tzinfo=UTC))
         self.assertEqual(item.payload["thread"]["id"], 200)
         self.assertEqual(item.payload["comment"]["text"], "Acme | Backend Engineer | Zurich | ONSITE")
         self.assertNotIn("children", item.payload["comment"])

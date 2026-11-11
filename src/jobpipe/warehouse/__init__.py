@@ -13,11 +13,12 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
 from importlib import resources
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Mapping
+from typing import Any
 
 from jobpipe import dedup, employers, jobs, match, roles, seniority, tech
 from jobpipe.bronze import read_records
@@ -45,17 +46,20 @@ LEVELS_COLUMNS = (
 )  # fmt: skip
 RUN_COLUMNS = ("source", "run_id", "ingest_date", "records", "first_fetched", "last_fetched")
 
+# One row of a silver table, in the order of its *_COLUMNS.
+Row = tuple[Any, ...]
+
 
 @dataclass
 class Tables:
-    postings: list[tuple] = field(default_factory=list)
-    posted_salaries: list[tuple] = field(default_factory=list)
-    adzuna_salary_histogram: list[tuple] = field(default_factory=list)
-    adzuna_salary_history: list[tuple] = field(default_factory=list)
-    levelsfyi_benchmarks: list[tuple] = field(default_factory=list)
-    ingest_runs: list[tuple] = field(default_factory=list)
-    technologies: list[tuple] = field(default_factory=list)
-    posting_matches: list[tuple] = field(default_factory=list)
+    postings: list[Row] = field(default_factory=list)
+    posted_salaries: list[Row] = field(default_factory=list)
+    adzuna_salary_histogram: list[Row] = field(default_factory=list)
+    adzuna_salary_history: list[Row] = field(default_factory=list)
+    levelsfyi_benchmarks: list[Row] = field(default_factory=list)
+    ingest_runs: list[Row] = field(default_factory=list)
+    technologies: list[Row] = field(default_factory=list)
+    posting_matches: list[Row] = field(default_factory=list)
 
     def counts(self) -> dict[str, int]:
         return {name: len(rows) for name, rows in vars(self).items()}
@@ -114,7 +118,7 @@ class Current:
 def current_postings(data_dir: Path) -> list[Current]:
     """Every posting in bronze, once, grouped into jobs (see dedup.py)."""
     found = list(_current_postings(data_dir))
-    return [replace(c, job_id=job_id, job_rank=rank) for c, (job_id, rank) in zip(found, dedup.group(found))]
+    return [replace(c, job_id=job_id, job_rank=rank) for c, (job_id, rank) in zip(found, dedup.group(found), strict=True)]
 
 
 def _current_postings(data_dir: Path) -> Iterator[Current]:
@@ -170,7 +174,7 @@ def _postings(data_dir: Path, tables: Tables, profile: match.Profile | None) -> 
             tables.posting_matches.append((source, posting.source_id, m.fits, m.score, m.rank, list(m.have), list(m.missing)))
 
 
-def _salary_key(salary: Mapping[str, Any]) -> tuple:
+def _salary_key(salary: Mapping[str, Any]) -> Row:
     return (salary["currency"], salary["min"], salary["max"], salary["period"], salary["predicted"], salary["tier"])
 
 

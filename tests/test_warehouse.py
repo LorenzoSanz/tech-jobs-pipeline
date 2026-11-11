@@ -3,7 +3,7 @@ import os
 import re
 import tempfile
 import unittest
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from jobpipe import match, warehouse
@@ -17,7 +17,7 @@ PROFILE = match.Profile(skills=frozenset({"python", "postgresql"}), roles=frozen
 
 
 def clock(day: int, hour: int = 8):
-    return lambda: datetime(2026, 11, day, hour, tzinfo=timezone.utc)
+    return lambda: datetime(2026, 11, day, hour, tzinfo=UTC)
 
 
 def ashby_job(job_id: str = "a1", low: int = 120000, title: str = "Backend Engineer") -> dict:
@@ -44,11 +44,11 @@ def write_fixture(root: Path) -> None:
                   "location": {"display_name": "Zürich"}, "redirect_url": "https://www.adzuna.ch/details/9",
                   "salary_min": 100000, "salary_max": 110000, "salary_is_predicted": "0"}  # fmt: skip
     BronzeWriter(root, clock(9)).write(
-        "adzuna", [RawItem("ch:9", {"country": "ch", "job": adzuna_job}, datetime(2026, 11, 5, tzinfo=timezone.utc))]
+        "adzuna", [RawItem("ch:9", {"country": "ch", "job": adzuna_job}, datetime(2026, 11, 5, tzinfo=UTC))]
     )
     comment = {"id": 7, "author": "x", "text": "Acme | Madrid | Data Engineer<p>€55k - €70k<p>Python and dbt", "created_at": None}
     BronzeWriter(root, clock(9)).write(
-        "hn", [RawItem("7", {"comment": comment}, datetime(2026, 11, 2, tzinfo=timezone.utc))]
+        "hn", [RawItem("7", {"comment": comment}, datetime(2026, 11, 2, tzinfo=UTC))]
     )
     BronzeWriter(root, clock(9)).write("adzuna_salary", [
         RawItem("ch:histogram:it-jobs:data engineer", {"kind": "histogram", "country": "ch", "what": "data engineer",
@@ -75,11 +75,11 @@ class BuildTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_postings_keep_newest_snapshot_and_lifetime(self):
-        rows = {row[1]: dict(zip(warehouse.POSTING_COLUMNS, row)) for row in self.tables.postings}
+        rows = {row[1]: dict(zip(warehouse.POSTING_COLUMNS, row, strict=True)) for row in self.tables.postings}
         swiss = rows["acme:a1"]
 
-        self.assertEqual(swiss["first_seen"], datetime(2026, 11, 1, 8, tzinfo=timezone.utc))
-        self.assertEqual(swiss["last_seen"], datetime(2026, 11, 9, 8, tzinfo=timezone.utc))
+        self.assertEqual(swiss["first_seen"], datetime(2026, 11, 1, 8, tzinfo=UTC))
+        self.assertEqual(swiss["last_seen"], datetime(2026, 11, 9, 8, tzinfo=UTC))
         self.assertEqual(swiss["snapshots"], 2)
         self.assertEqual(swiss["regions"], ["ch"])
         self.assertEqual(swiss["role"], "backend")
@@ -88,13 +88,13 @@ class BuildTest(unittest.TestCase):
         self.assertEqual(rows["7"]["technologies"], ["python", "dbt"])
 
     def test_open_means_in_the_newest_snapshot_of_its_board(self):
-        rows = {row[1]: dict(zip(warehouse.POSTING_COLUMNS, row)) for row in self.tables.postings}
+        rows = {row[1]: dict(zip(warehouse.POSTING_COLUMNS, row, strict=True)) for row in self.tables.postings}
 
         self.assertEqual({key: row["is_open"] for key, row in rows.items()},
                          {"acme:a1": True, "acme:a2": False, "7": True, "ch:9": True})  # fmt: skip
 
     def test_places_seniority_and_jobs(self):
-        rows = {row[1]: dict(zip(warehouse.POSTING_COLUMNS, row)) for row in self.tables.postings}
+        rows = {row[1]: dict(zip(warehouse.POSTING_COLUMNS, row, strict=True)) for row in self.tables.postings}
 
         self.assertEqual({k: (r["city"], r["country"], r["countries"]) for k, r in rows.items()}, {
             "acme:a1": ("Zurich", "CH", ["CH"]), "acme:a2": ("Zurich", "CH", ["CH"]),
@@ -107,7 +107,7 @@ class BuildTest(unittest.TestCase):
         })  # fmt: skip
 
     def test_matches_against_the_profile(self):
-        matches = {row[1]: dict(zip(warehouse.MATCH_COLUMNS, row)) for row in self.tables.posting_matches}
+        matches = {row[1]: dict(zip(warehouse.MATCH_COLUMNS, row, strict=True)) for row in self.tables.posting_matches}
 
         self.assertAlmostEqual(matches["acme:a1"]["score"], 2 / 3)
         self.assertEqual(matches["acme:a1"]["missing"], ["kafka"])
@@ -115,7 +115,7 @@ class BuildTest(unittest.TestCase):
         self.assertEqual(warehouse.build(self.root).posting_matches, [])
 
     def test_salaries_come_from_the_newest_snapshot(self):
-        by_id = {row[1]: dict(zip(warehouse.SALARY_COLUMNS, row)) for row in self.tables.posted_salaries}
+        by_id = {row[1]: dict(zip(warehouse.SALARY_COLUMNS, row, strict=True)) for row in self.tables.posted_salaries}
 
         self.assertEqual((by_id["acme:a1"]["currency"], by_id["acme:a1"]["min_annual"]), ("CHF", 120000))
         self.assertEqual((by_id["7"]["currency"], by_id["7"]["max_annual"]), ("EUR", 70000))

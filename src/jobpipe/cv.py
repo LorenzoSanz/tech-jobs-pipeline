@@ -116,13 +116,13 @@ _SENIORITY_WORDS = re.compile(
 
 
 ROLE_NOUNS = frozenset(
-    "engineer engineers developer analyst scientist architect administrator consultant specialist".split()
+    ["engineer", "engineers", "developer", "analyst", "scientist", "architect", "administrator", "consultant", "specialist"]
 )
 # Spanish puts the noun first: "ingeniero de datos", "desarrollador backend".
 ROLE_NOUNS_FIRST = frozenset(
-    "ingeniero ingeniera desarrollador desarrolladora analista arquitecto arquitecta cientifico".split()
+    ["ingeniero", "ingeniera", "desarrollador", "desarrolladora", "analista", "arquitecto", "arquitecta", "cientifico"]
 )
-_NOT_A_QUALIFIER = frozenset("and or of for the a to with in at".split())
+_NOT_A_QUALIFIER = frozenset(["and", "or", "of", "for", "the", "a", "to", "with", "in", "at"])
 
 
 def title_terms(title: str) -> set[str]:

@@ -45,7 +45,7 @@ LEVELS: tuple[Level, ...] = (
     Level("mid", "Mid-level", "Intermedio", rf"\bmid\b(?![- ]?market)|intermediate|\bmedior\b|{_IC}ii{_NUMERAL}"),
 )  # fmt: skip
 UNSPECIFIED = Level("unspecified", "Not stated", "Sin indicar")
-ALL = LEVELS + (UNSPECIFIED,)
+ALL = (*LEVELS, UNSPECIFIED)
 ORDER = tuple(level.key for level in ALL)
 
 _COMPILED = tuple((level.key, re.compile(level.pattern, re.IGNORECASE)) for level in LEVELS)

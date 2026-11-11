@@ -61,8 +61,7 @@ EMPLOYERS: dict[str, tuple[str, ...]] = {
 }  # fmt: skip
 
 LEGAL_FORMS = frozenset(
-    "ag gmbh sa sl slu sau inc ltd llc bv nv sas sarl plc ab oy as aps spa srl co corp corporation limited"
-    " company se kg holding group com io careers jobs hq the a b l s u v".split()
+    ["ag", "gmbh", "sa", "sl", "slu", "sau", "inc", "ltd", "llc", "bv", "nv", "sas", "sarl", "plc", "ab", "oy", "as", "aps", "spa", "srl", "co", "corp", "corporation", "limited", "company", "se", "kg", "holding", "group", "com", "io", "careers", "jobs", "hq", "the", "a", "b", "l", "s", "u", "v"]
 )
 
 
@@ -75,8 +74,7 @@ def company_key(company: str | None) -> str:
 
 # Dropped after the legal forms: "Amazon Web Services EMEA", "Google Switzerland".
 GENERIC = frozenset(
-    "international global europe european emea worldwide technologies technology tech development center centre"
-    " services operations digital software labs research engineering".split()
+    ["international", "global", "europe", "european", "emea", "worldwide", "technologies", "technology", "tech", "development", "center", "centre", "services", "operations", "digital", "software", "labs", "research", "engineering"]
 )
 
 

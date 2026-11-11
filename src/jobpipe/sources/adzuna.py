@@ -8,9 +8,9 @@ Adzuna's terms require attribution when its data is shown publicly.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Iterator
+from datetime import UTC, datetime
 
 from jobpipe.bronze import RawItem
 from jobpipe.http import HttpClient
@@ -38,7 +38,7 @@ def _parse_created(value: str | None) -> datetime | None:
     if not value:
         return None
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
 def ingest(http: HttpClient, credentials: AdzunaCredentials, query: AdzunaQuery) -> Iterator[RawItem]:

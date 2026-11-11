@@ -30,7 +30,8 @@ class KeyTest(unittest.TestCase):
         self.assertEqual(employers.company_key("The Company"), "the company")  # nothing left: keep everything
 
     def test_title(self):
-        same = ["Data Engineer (m/w/d)", "Data Engineer - Zürich", "Data Engineer, Remote", "DATA ENGINEER"]
+        same = ["Data Engineer (m/w/d)", "Data Engineer - Zürich", "Data Engineer, Remote", "DATA ENGINEER",
+                "Data Engineer, FULL:TIME"]  # fmt: skip
         self.assertEqual({dedup.title_key(t) for t in same}, {"data engineer"})
         self.assertNotEqual(dedup.title_key("Senior Data Engineer"), dedup.title_key("Data Engineer"))
         self.assertNotEqual(dedup.title_key("Account Executive (Malaysia Market)"),
