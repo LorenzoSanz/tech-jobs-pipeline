@@ -12,6 +12,7 @@ import logging
 import re
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
+from xml.etree import ElementTree
 
 from jobpipe.http import HttpClient, HttpError
 from jobpipe.sources import ats
@@ -32,6 +33,11 @@ class BoardCheck:
         return self.error is None and self.regional_jobs > 0
 
 
+def _country_name(code: str | None) -> str | None:
+    """SmartRecruiters gives only a country code; the region patterns match names."""
+    return {"ch": "Switzerland", "es": "Spain"}.get((code or "").lower(), code)
+
+
 def job_locations(ats_name: str, job: Mapping[str, Any]) -> list[str]:
     """Every location string an ATS gives for one job."""
     found: list[str | None] = []
@@ -49,6 +55,18 @@ def job_locations(ats_name: str, job: Mapping[str, Any]) -> list[str]:
         found.extend(extra.get("location") for extra in job.get("secondaryLocations") or [])
         address = (job.get("address") or {}).get("postalAddress") or {}
         found.extend([address.get("addressLocality"), address.get("addressCountry")])
+    elif ats_name == "smartrecruiters":
+        location = job.get("location") or {}
+        found.extend([location.get("fullLocation"), _country_name(location.get("country"))])
+    elif ats_name == "workable":
+        found.extend([job.get("city"), job.get("country")])
+        found.extend(loc.get("country") for loc in job.get("locations") or [])
+    elif ats_name == "recruitee":
+        found.extend([job.get("location"), job.get("country")])
+        found.extend(loc.get("country") for loc in job.get("locations") or [])
+    elif ats_name == "personio":
+        found.append(job.get("office"))
+        found.extend(job.get("additionalOffices") or [])
     return [value for value in found if isinstance(value, str) and value]
 
 
@@ -57,7 +75,7 @@ def check_board(
 ) -> BoardCheck:
     try:
         jobs = [item.payload["job"] for item in ats.FETCHERS[ats_name](http, board)]
-    except (HttpError, KeyError, TypeError, ValueError) as error:
+    except (HttpError, KeyError, TypeError, ValueError, ElementTree.ParseError) as error:
         return BoardCheck(ats_name, board, 0, 0, str(error))
     regional = sum(
         1 for job in jobs if any(pattern.search(loc) for loc in job_locations(ats_name, job))

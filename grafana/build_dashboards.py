@@ -42,7 +42,8 @@ REGION_SQL = "coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text
 REGIONS = {"ch": ("Switzerland", "Suiza"), "es": ("Spain", "España"), "eu": ("Rest of Europe", "Resto de Europa"),
            "other": ("Other / unknown", "Otras / sin región")}  # fmt: skip
 REGION_COLORS = dict(zip(REGIONS, [BLUE, PURPLE, SKY, LAVENDER]))
-SOURCES = ("hn", "greenhouse", "lever", "ashby", "adzuna", "adzuna_salary", "levelsfyi")
+SOURCES = ("hn", "greenhouse", "lever", "ashby", "smartrecruiters", "workable", "recruitee", "personio",
+           "adzuna", "adzuna_salary", "levelsfyi")
 
 
 def any_of(column, var):

@@ -221,6 +221,50 @@ def _greenhouse(record: Mapping[str, Any]) -> Iterator[PostedSalary]:
                           location, None, job.get("content") or "", job.get("absolute_url"))
 
 
+def _smartrecruiters(record: Mapping[str, Any]) -> Iterator[PostedSalary]:
+    job = record["payload"]["job"]
+    location = job.get("location") or {}
+    sections = ((job.get("jobAd") or {}).get("sections") or {}).values()
+    yield from _from_text(record, job.get("name"), (job.get("company") or {}).get("name") or record["payload"]["board"],
+                          location.get("fullLocation"), location.get("country"),
+                          " ".join(s.get("text") or "" for s in sections if isinstance(s, dict)), job.get("postingUrl"))
+
+
+def _workable(record: Mapping[str, Any]) -> Iterator[PostedSalary]:
+    job = record["payload"]["job"]
+    country = next((loc.get("countryCode") for loc in job.get("locations") or []), None) or job.get("country")
+    yield from _from_text(record, job.get("title"), record["payload"]["board"],
+                          ", ".join(filter(None, [job.get("city"), job.get("country")])), country,
+                          job.get("description") or "", job.get("url"))
+
+
+def _recruitee(record: Mapping[str, Any]) -> Iterator[PostedSalary]:
+    job = record["payload"]["job"]
+    company = job.get("company_name") or record["payload"]["board"]
+    pay = job.get("salary") or {}
+    period = {"year": "year", "month": "month", "week": "week", "day": "day", "hour": "hour"}.get(pay.get("period") or "")
+    try:
+        low, high = float(pay.get("min") or 0), float(pay.get("max") or pay.get("min") or 0)
+    except ValueError:
+        low = high = 0
+    if period and low and pay.get("currency"):
+        annual = _annual(low, high, period)
+        if annual:
+            yield _posted(record, job.get("title"), company, job.get("location"), job.get("country_code"),
+                          pay["currency"], annual, period, url=job.get("careers_url"))
+            return
+    yield from _from_text(record, job.get("title"), company, job.get("location"), job.get("country_code"),
+                          " ".join(filter(None, [job.get("description"), job.get("requirements")])),
+                          job.get("careers_url"))
+
+
+def _personio(record: Mapping[str, Any]) -> Iterator[PostedSalary]:
+    job = record["payload"]["job"]
+    yield from _from_text(record, job.get("name"), job.get("subcompany") or record["payload"]["board"],
+                          job.get("office"), None,
+                          " ".join(d.get("value") or "" for d in job.get("descriptions") or []), job.get("url"))
+
+
 def _adzuna(record: Mapping[str, Any]) -> Iterator[PostedSalary]:
     job = record["payload"]["job"]
     country = record["payload"].get("country")
@@ -259,7 +303,10 @@ def _posted(record, title, company, location, country, currency, annual, period,
     )  # fmt: skip
 
 
-EXTRACTORS = {"ashby": _ashby, "lever": _lever, "greenhouse": _greenhouse, "adzuna": _adzuna, "hn": _hn}
+EXTRACTORS = {
+    "ashby": _ashby, "lever": _lever, "greenhouse": _greenhouse, "smartrecruiters": _smartrecruiters,
+    "workable": _workable, "recruitee": _recruitee, "personio": _personio, "adzuna": _adzuna, "hn": _hn,
+}  # fmt: skip
 
 
 def latest(records: Iterable[Mapping[str, Any]]) -> list[Mapping[str, Any]]:

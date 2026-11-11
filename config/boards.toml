@@ -7,6 +7,10 @@
 #   greenhouse -> https://boards-api.greenhouse.io/v1/boards/<token>/jobs
 #   lever      -> https://api.lever.co/v0/postings/<site>?mode=json
 #   ashby      -> https://api.ashbyhq.com/posting-api/job-board/<name>
+#   smartrecruiters -> https://api.smartrecruiters.com/v1/companies/<id>/postings
+#   workable   -> https://apply.workable.com/api/v1/widget/accounts/<account>
+#   recruitee  -> https://<company>.recruitee.com/api/offers/
+#   personio   -> https://<company>.jobs.personio.de/xml
 
 # Verified on 2026-11-09 with verify-boards (regions ch, es, eu).
 # Comment = regional jobs / all open jobs at that time.
@@ -134,4 +138,40 @@ boards = [
   "speckle",  # 1/2
   "triggerdev",  # 1/6
   "upflow",  # 1/1
+]
+
+# Verified on 2026-11-11 from a list of Swiss and Spanish companies.
+# Dropped boards whose name belongs to another company (personio "neon",
+# a Berlin law firm) or to a test account (personio "sika").
+
+[smartrecruiters]
+boards = [
+  "ubisoft2",  # 67/289
+  "swissquote",  # 28/35
+  "nexthink",  # 24/65
+  "caravelo",  # 1/1
+]
+
+[workable]
+boards = [
+  "netcetera",  # 13/26
+  "sophia-genetics",  # 7/40
+  "crypto-finance",  # 6/6
+  "distalmotion",  # 5/25
+  "codurance",  # 4/17
+]
+
+[recruitee]
+boards = [
+  "sequra",  # 14/14
+  "holded",  # 7/7
+  "swisscom",  # 6/6, Swisscom's Rotterdam office
+  "climeworks",  # 5/5
+  "exeon",  # 3/3
+]
+
+[personio]
+boards = [
+  "legartis",  # 6/7
+  "caravelo",  # 4/4
 ]

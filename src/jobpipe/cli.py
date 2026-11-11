@@ -286,7 +286,7 @@ def build_parser() -> argparse.ArgumentParser:
     hn_parser.add_argument("--since", type=date.fromisoformat, help="YYYY-MM-DD; default: all since 2011")
     hn_parser.set_defaults(handler=_ingest_hn)
 
-    ats_parser = sources.add_parser("ats", help="Greenhouse, Lever and Ashby boards")
+    ats_parser = sources.add_parser("ats", help="public ATS boards (Greenhouse, Lever, Ashby, SmartRecruiters, Workable, Recruitee, Personio)")
     ats_parser.add_argument("--boards", type=Path, default=DEFAULT_BOARDS_FILE)
     ats_parser.add_argument("--only", choices=sorted(ats.FETCHERS))
     ats_parser.set_defaults(handler=_ingest_ats)
@@ -431,6 +431,11 @@ def _load(args: argparse.Namespace) -> int:
 
 def main(argv: Sequence[str] | None = None, http: HttpClient | None = None) -> int:
     args = build_parser().parse_args(argv)
+    # Postings carry any script (Romanian, Czech...); on Windows a redirected
+    # stdout defaults to the ANSI code page and cannot print them.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",

@@ -511,7 +511,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#7495F8"
+                  "fixedColor": "#6C9CF9"
                 }
               }
             ]
@@ -526,7 +526,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#8885F6"
+                  "fixedColor": "#7892F8"
                 }
               }
             ]
@@ -541,7 +541,67 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
+                  "fixedColor": "#8488F7"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "smartrecruiters"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#907FF6"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "workable"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
                   "fixedColor": "#9C76F4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "recruitee"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A96CF3"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "personio"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B562F2"
                 }
               }
             ]
@@ -556,7 +616,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#B166F3"
+                  "fixedColor": "#C159F1"
                 }
               }
             ]
@@ -571,7 +631,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#C556F1"
+                  "fixedColor": "#CD50F0"
                 }
               }
             ]

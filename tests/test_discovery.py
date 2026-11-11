@@ -32,6 +32,19 @@ class ExtractBoardsTest(unittest.TestCase):
 
         self.assertEqual(extract_boards(text), {})
 
+    def test_finds_boards_of_the_other_ats(self):
+        text = (
+            "https://jobs.smartrecruiters.com/Acme/123 https://apply.workable.com/beta/j/9F"
+            " https://gamma.workable.com https://apply.workable.com/j/2FAA https://delta.recruitee.com/o/dev"
+            " https://epsilon.jobs.personio.de/job/1 https://zeta.jobs.personio.com"
+        )
+
+        self.assertEqual(
+            extract_boards(text),
+            {"smartrecruiters": {"Acme"}, "workable": {"beta", "gamma"}, "recruitee": {"delta"},
+             "personio": {"epsilon", "zeta"}},
+        )  # fmt: skip
+
     def test_drops_sentence_punctuation(self):
         self.assertEqual(extract_boards("See jobs.lever.co/acme."), {"lever": {"acme"}})
 
