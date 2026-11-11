@@ -52,8 +52,16 @@ class ToPostingTest(unittest.TestCase):
 
         posting = jobs.to_posting("personio", record("personio", job))
 
-        self.assertEqual((posting.location, posting.regions), ("Zurich, Madrid", ("ch", "es")))
+        self.assertEqual((posting.location, posting.regions), ("Zurich; Madrid", ("ch", "es")))
+        self.assertEqual((posting.place.city, posting.countries), ("Zurich", ("CH", "ES")))
         self.assertEqual(posting.description.strip(), "dbt")
+
+    def test_regions_also_come_from_known_cities(self):
+        job = {"id": "43", "name": "Backend Engineer", "office": "Leipzig", "url": "https://acme.jobs.personio.de/job/43"}
+
+        posting = jobs.to_posting("personio", record("personio", job))
+
+        self.assertEqual((posting.countries, posting.regions), (("DE",), ("eu",)))
 
 
 if __name__ == "__main__":

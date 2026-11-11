@@ -120,12 +120,15 @@ class CliTest(unittest.TestCase):
 
         BronzeWriter(self.data_dir).write("ashby", [
             job("a1", "Data Engineer", "Python and Kafka"),
-            job("a2", "Data Engineer", "Python, SQL and Airflow"),
+            job("a2", "Data Platform Engineer", "Python, SQL and Airflow"),
             job("a3", "Data Engineer", "Python", location="Austin, TX"),
             job("a4", "Product Designer", "Figma"),
+            job("a5", "Data Engineer (m/w/d)", "Python and Kafka", location="Zürich"),  # same job as a1
+            job("a6", "Senior Data Engineer", "Python and SQL"),
         ])  # fmt: skip
         profile = self.root / "profile.toml"
-        profile.write_text('skills = ["python", "sql", "airflow"]\nroles = ["data"]\nregions = ["ch"]\n')
+        profile.write_text('skills = ["python", "sql", "airflow"]\nroles = ["data"]\nregions = ["ch"]\n'
+                           'seniority = ["junior", "mid", "unspecified"]\n')  # fmt: skip
 
         code, out = self.run_cli("feed", "--profile", str(profile), "--format", "json")
         text_code, text = self.run_cli("feed", "--profile", str(profile))

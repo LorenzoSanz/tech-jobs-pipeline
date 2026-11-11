@@ -39,6 +39,13 @@ def write_fixture(root: Path) -> None:
         RawItem("acme:a2", {"board": "acme", "job": ashby_job("a2", title="Senior Backend Engineer")}),
     ])  # fmt: skip
     BronzeWriter(root, clock(9)).write("ashby", [RawItem("acme:a1", {"board": "acme", "job": ashby_job()})])
+    # a1 again, on Adzuna: the same job, so it must count once
+    adzuna_job = {"id": "9", "title": "Backend Engineer (m/w/d)", "company": {"display_name": "Acme AG"},
+                  "location": {"display_name": "Zürich"}, "redirect_url": "https://www.adzuna.ch/details/9",
+                  "salary_min": 100000, "salary_max": 110000, "salary_is_predicted": "0"}  # fmt: skip
+    BronzeWriter(root, clock(9)).write(
+        "adzuna", [RawItem("ch:9", {"country": "ch", "job": adzuna_job}, datetime(2026, 11, 5, tzinfo=timezone.utc))]
+    )
     comment = {"id": 7, "author": "x", "text": "Acme | Madrid | Data Engineer<p>€55k - €70k<p>Python and dbt", "created_at": None}
     BronzeWriter(root, clock(9)).write(
         "hn", [RawItem("7", {"comment": comment}, datetime(2026, 11, 2, tzinfo=timezone.utc))]
@@ -84,7 +91,20 @@ class BuildTest(unittest.TestCase):
         rows = {row[1]: dict(zip(warehouse.POSTING_COLUMNS, row)) for row in self.tables.postings}
 
         self.assertEqual({key: row["is_open"] for key, row in rows.items()},
-                         {"acme:a1": True, "acme:a2": False, "7": True})  # fmt: skip
+                         {"acme:a1": True, "acme:a2": False, "7": True, "ch:9": True})  # fmt: skip
+
+    def test_places_seniority_and_jobs(self):
+        rows = {row[1]: dict(zip(warehouse.POSTING_COLUMNS, row)) for row in self.tables.postings}
+
+        self.assertEqual({k: (r["city"], r["country"], r["countries"]) for k, r in rows.items()}, {
+            "acme:a1": ("Zurich", "CH", ["CH"]), "acme:a2": ("Zurich", "CH", ["CH"]),
+            "ch:9": ("Zurich", "CH", ["CH"]), "7": ("Madrid", "ES", ["ES"]),
+        })  # fmt: skip
+        self.assertEqual((rows["acme:a1"]["seniority"], rows["acme:a2"]["seniority"]), ("unspecified", "senior"))
+        self.assertEqual({k: (r["job_id"], r["job_rank"]) for k, r in rows.items()}, {
+            "acme:a1": ("ashby:acme:a1", 0), "ch:9": ("ashby:acme:a1", 1),
+            "acme:a2": ("ashby:acme:a2", 0), "7": ("hn:7", 0),
+        })  # fmt: skip
 
     def test_matches_against_the_profile(self):
         matches = {row[1]: dict(zip(warehouse.MATCH_COLUMNS, row)) for row in self.tables.posting_matches}
@@ -105,7 +125,8 @@ class BuildTest(unittest.TestCase):
         self.assertEqual([r[2] for r in self.tables.adzuna_salary_history], [date(2026, 9, 1), date(2026, 10, 1)])
         self.assertEqual(self.tables.levelsfyi_benchmarks[0][3], "zurich-area")
         self.assertEqual(sorted((r[0], r[3]) for r in self.tables.ingest_runs),
-                         [("adzuna_salary", 2), ("ashby", 1), ("ashby", 2), ("hn", 1), ("levelsfyi", 1)])  # fmt: skip
+                         [("adzuna", 1), ("adzuna_salary", 2), ("ashby", 1), ("ashby", 2), ("hn", 1),
+                          ("levelsfyi", 1)])  # fmt: skip
 
     def test_write_explains_a_missing_driver(self):
         try:
@@ -127,7 +148,7 @@ def panel_sql(dashboard: dict) -> list[tuple[str, str]]:
     queries = [(panel_name(p), t["rawSql"]) for p in dashboard["panels"] for t in p.get("targets", [])]
     queries += [(f"variable {v['name']}", v["query"]) for v in dashboard["templating"]["list"] if v["type"] == "query"]
     values = {
-        "region": "'ch','es','eu','other'", "currency:sqlstring": "'CHF'", "role": "'__all'",
+        "region": "'ch','es','eu','other'", "currency:sqlstring": "'CHF'", "role": "'__all'", "seniority": "'__all'",
         "company": "'Acme','acme'", "predicted:raw": "false", "offer:sqlstring": "'100000'",
         "adzuna:sqlstring": "'ch | data engineer'", "with_salary:raw": "true", "technology": "'python','dbt'",
         "min_match:raw": "0", "new:raw": "36500",
@@ -166,12 +187,15 @@ class PostgresTest(unittest.TestCase):
         root = Path(self.tmp.name)
         warehouse.write(TEST_DSN, warehouse.build(root, PROFILE))
 
-        self.assertEqual(self.query("SELECT count(*) FROM silver.postings"), [(3,)])
+        self.assertEqual(self.query("SELECT count(*) FROM silver.postings"), [(4,)])
+        self.assertEqual(self.query("SELECT count(*) FROM gold.jobs"), [(3,)])
         self.assertEqual(self.query("SELECT count(*) FROM silver.load_log"), [(1,)])
 
     def test_gold_views(self):
-        regions = dict(self.query("SELECT source_id, region FROM gold.posting_regions"))
+        regions = dict(self.query("SELECT source_id, region FROM gold.job_regions"))
         midpoint = self.query("SELECT midpoint FROM gold.salaries WHERE source_id = 'acme:a1'")
+        salary_sources = self.query("SELECT DISTINCT source FROM gold.salaries ORDER BY 1")
+        job = self.query("SELECT postings, sources, place FROM gold.jobs WHERE source_id = 'acme:a1'")
         feed = self.query("SELECT source_id FROM gold.feed ORDER BY rank DESC")
         demand = self.query("SELECT technology, count(*) FROM gold.posting_technologies GROUP BY 1 ORDER BY 1")
 
@@ -179,6 +203,8 @@ class PostgresTest(unittest.TestCase):
         self.assertEqual(feed, [("acme:a1",), ("7",)])  # a2 is closed; 2 of 3 known ranks above 1 of 2
         self.assertEqual(demand, [("dbt", 1), ("kafka", 2), ("postgresql", 2), ("python", 3)])
         self.assertEqual(float(midpoint[0][0]), 135000)
+        self.assertEqual(salary_sources, [("ashby",), ("hn",)])  # Adzuna's copy of a1 is not counted again
+        self.assertEqual(job, [(2, ["adzuna", "ashby"], "Zurich · CH")])
 
     def test_every_dashboard_query_runs(self):
         for path in DASHBOARD_FILES:
@@ -200,8 +226,9 @@ class PostgresTest(unittest.TestCase):
         [(_, sql)] = [q for q in panel_sql(dashboard) if q[0] == "Click the title to open the posting"]
 
         rows = self.query(sql)
-        self.assertEqual([(r[0], r[1], r[4], r[5]) for r in rows],
-                         [(67, "Backend Engineer", "Python, PostgreSQL", "Kafka"), (50, rows[1][1], "Python", "dbt")])  # fmt: skip
+        self.assertEqual([(r[0], r[1], r[3], r[4], r[5], r[6]) for r in rows],
+                         [(67, "Backend Engineer", "Zurich · CH", "Not stated", "Python, PostgreSQL", "Kafka"),
+                          (50, rows[1][1], "Madrid · ES", "Not stated", "Python", "dbt")])  # fmt: skip
 
     def test_role_labels_follow_the_language(self):
         for lang, data in [("en", "Data"), ("es", "Datos")]:

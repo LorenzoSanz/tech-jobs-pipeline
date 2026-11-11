@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from jobpipe import roles, tech  # noqa: E402
+from jobpipe import roles, seniority, tech  # noqa: E402
 
 OUT = Path(sys.argv[1])
 DS = {"type": "grafana-postgresql-datasource", "uid": "jobpipe-pg"}
@@ -230,6 +230,8 @@ def build(lang):
 
     other = "es" if lang == "en" else "en"
     role_label = label_sql("role", {f.key: f.label(lang) for f in roles.ALL})
+    level_label = label_sql("seniority", {level.key: level.label(lang) for level in seniority.ALL})
+    level_order = "array_position(ARRAY[" + ", ".join(f"'{key}'" for key in seniority.ORDER) + "], seniority)"
     region_names = {code: t(*names) for code, names in REGIONS.items()}
     region_label = label_sql("region", region_names)
     open_posting = t("Open posting", "Abrir oferta")
@@ -245,6 +247,15 @@ def build(lang):
             "role", t("Role", "Rol"),
             f"SELECT role AS __value, {role_label} AS __text FROM {source} GROUP BY role ORDER BY count(*) DESC",
             multi=True, all_option=True, description=t("Role family, from the job title.", "Familia de puesto, deducida del título."),
+        )  # fmt: skip
+
+    def level_var(source):
+        return query_var(
+            "seniority", t("Seniority", "Nivel"),
+            f"SELECT seniority AS __value, {level_label} AS __text FROM {source} GROUP BY seniority ORDER BY {level_order}",
+            multi=True, all_option=True,
+            description=t("From the job title. Most titles do not state it.",
+                          "Deducido del título. La mayoría de títulos no lo indican."),
         )  # fmt: skip
 
     def dashboard(name, title, grid, variables, time_from="now-1y", description=""):
@@ -268,6 +279,7 @@ def build(lang):
 
     feed_where = f"""{REGION_SQL}
   AND {any_of("role", "role")}
+  AND {any_of("seniority", "seniority")}
   AND coalesce(score, 0) * 100 >= ${{min_match:raw}}
   AND first_seen > now() - interval '1 day' * ${{new:raw}}"""
     know, lack = t("You know", "Conoces"), t("You lack", "Te falta")
@@ -283,6 +295,7 @@ def build(lang):
         variables=[
             region_var,
             role_var("gold.feed"),
+            level_var("gold.feed"),
             custom_var("min_match", t("Match", "Encaje"),
                        [(t("Any", "Cualquiera"), "0"), ("50%+", "50"), ("70%+", "70"), ("90%+", "90")], ["0"],
                        description=t("Share of the technologies a posting asks for that you know.",
@@ -312,7 +325,8 @@ def build(lang):
             table(t("Click the title to open the posting", "Clic en el puesto para abrir la oferta"),
                   f"""
 SELECT round(100 * score) AS "{t("Match", "Encaje")}", title AS "{t("Title", "Puesto")}",
-       company AS "{t("Company", "Empresa")}", coalesce(location, country) AS "{t("Location", "Lugar")}",
+       company AS "{t("Company", "Empresa")}", place AS "{t("Location", "Lugar")}",
+       {level_label} AS "{t("Seniority", "Nivel")}",
        {labels_of("have")} AS "{know}", {labels_of("missing")} AS "{lack}",
        to_char(first_seen, 'YYYY-MM-DD') AS "{t("First seen", "Vista")}", source AS "{t("Source", "Fuente")}", url
 FROM gold.feed
@@ -362,6 +376,7 @@ GROUP BY t.label ORDER BY count(*) DESC, 1 LIMIT 15
 currency = ${{currency:sqlstring}}
   AND {REGION_SQL}
   AND {any_of("role", "role")}
+  AND {any_of("seniority", "seniority")}
   AND (NOT predicted OR ${{predicted:raw}})
   AND $__timeFilter(posted_at)
 """
@@ -377,6 +392,7 @@ currency = ${{currency:sqlstring}}
         variables=[
             region_var,
             role_var("gold.salaries"),
+            level_var("gold.salaries"),
             query_var("currency", t("Currency", "Moneda"),
                       "SELECT currency FROM silver.posted_salaries GROUP BY 1 "
                       "ORDER BY array_position(ARRAY['CHF', 'EUR'], currency) NULLS LAST, count(*) DESC",
@@ -428,6 +444,17 @@ SELECT {role_label} AS "{t("Role", "Rol")}", count(*) AS "{t("Postings", "Oferta
 FROM gold.salaries WHERE {where}
 GROUP BY role ORDER BY 4 DESC
 """, money=f"p25|{t('Median', 'Mediana')}|p75", bars=t("Median", "Mediana")),
+            table(t("By seniority", "Por nivel"),
+                  f"""
+SELECT {level_label} AS "{t("Seniority", "Nivel")}", count(*) AS "{t("Postings", "Ofertas")}",
+       percentile_cont(0.25) WITHIN GROUP (ORDER BY midpoint) AS "p25",
+       percentile_cont(0.5)  WITHIN GROUP (ORDER BY midpoint) AS "{t("Median", "Mediana")}",
+       percentile_cont(0.75) WITHIN GROUP (ORDER BY midpoint) AS "p75"
+FROM gold.salaries WHERE {where}
+GROUP BY seniority ORDER BY {level_order}
+""", money=f"p25|{t('Median', 'Mediana')}|p75", bars=t("Median", "Mediana"),
+                  description=t("Seniority comes from the title; most titles do not state it.",
+                                "El nivel sale del título; la mayoría de títulos no lo indican.")),
         )  # fmt: skip
         .section(t("Best-paying postings", "Ofertas mejor pagadas"))
         .line(
@@ -436,7 +463,7 @@ GROUP BY role ORDER BY 4 DESC
                     "Rangos más altos · clic en el puesto para abrir la oferta"),
                   f"""
 SELECT company AS "{t("Company", "Empresa")}", title AS "{t("Title", "Puesto")}", {role_label} AS "{t("Role", "Rol")}",
-       coalesce(location, country) AS "{t("Location", "Lugar")}",
+       {level_label} AS "{t("Seniority", "Nivel")}", coalesce(city || ', ' || country, location, country) AS "{t("Location", "Lugar")}",
        min_annual AS "{t("Min", "Mínimo")}", max_annual AS "{t("Max", "Máximo")}",
        to_char(posted_at, 'YYYY-MM-DD') AS "{t("Posted", "Publicada")}", source AS "{t("Source", "Fuente")}", url
 FROM gold.salaries WHERE {where}
@@ -483,20 +510,23 @@ ORDER BY location, kind DESC, yoe_range
 
     posting_where = f"""{REGION_SQL}
   AND {any_of("role", "role")}
+  AND {any_of("seniority", "seniority")}
   AND {any_of("company", "company")}"""
-    has_salary = """EXISTS (SELECT 1 FROM silver.posted_salaries s
-        WHERE s.source = p.source AND s.source_id = p.source_id AND NOT s.predicted)"""
+    has_salary = "EXISTS (SELECT 1 FROM gold.salaries s WHERE s.job_id = p.job_id AND NOT s.predicted)"
 
     market = dashboard(
         "market", t("Market and postings", "Mercado y ofertas"),
-        description=t("Postings per month and region, who is hiring, and the list of postings.",
-                      "Volumen de ofertas por mes y región, quién contrata, y lista de ofertas."),
+        description=t("Postings per month and region, who is hiring, and the list of postings. "
+                      "A job posted on several sources or in several cities counts once.",
+                      "Volumen de ofertas por mes y región, quién contrata, y lista de ofertas. "
+                      "Una oferta publicada en varias fuentes o ciudades cuenta una vez."),
         time_from="now-2y",
         variables=[
             region_var,
-            role_var("silver.postings"),
+            role_var("gold.jobs"),
+            level_var("gold.jobs"),
             query_var("company", t("Company", "Empresa"),
-                      "SELECT company FROM silver.postings WHERE company IS NOT NULL GROUP BY 1 ORDER BY count(*) DESC, 1 LIMIT 500",
+                      "SELECT company FROM gold.jobs WHERE company IS NOT NULL GROUP BY 1 ORDER BY count(*) DESC, 1 LIMIT 500",
                       multi=True, all_option=True,
                       description=t("The 500 companies with the most postings.", "Las 500 empresas con más ofertas.")),
             query_var("technology", t("Technologies (trend)", "Tecnologías (tendencia)"),
@@ -511,13 +541,13 @@ ORDER BY location, kind DESC, yoe_range
         .line(
             KPI_H,
             stat(t("Seen in the last 7 days", "Vistas en los últimos 7 días"),
-                 f"SELECT count(*) FROM silver.postings WHERE last_seen > now() - interval '7 days' AND {posting_where}"),
+                 f"SELECT count(*) FROM gold.jobs WHERE last_seen > now() - interval '7 days' AND {posting_where}"),
             stat(t("New in the last 30 days", "Nuevas en los últimos 30 días"),
-                 f"SELECT count(*) FROM silver.postings WHERE coalesce(published, first_seen) > now() - interval '30 days' AND {posting_where}"),
+                 f"SELECT count(*) FROM gold.jobs WHERE posted_at > now() - interval '30 days' AND {posting_where}"),
             stat(t("Companies hiring (90 days)", "Empresas contratando (90 días)"),
-                 f"SELECT count(DISTINCT lower(company)) FROM silver.postings WHERE last_seen > now() - interval '90 days' AND {posting_where}"),
+                 f"SELECT count(DISTINCT lower(company)) FROM gold.jobs WHERE last_seen > now() - interval '90 days' AND {posting_where}"),
             stat(t("With a stated salary", "Con salario publicado"),
-                 f"SELECT 100.0 * count(*) FILTER (WHERE {has_salary}) / nullif(count(*), 0) FROM silver.postings p WHERE {posting_where}",
+                 f"SELECT 100.0 * count(*) FILTER (WHERE {has_salary}) / nullif(count(*), 0) FROM gold.jobs p WHERE {posting_where}",
                  unit="percent", decimals=1),
         )  # fmt: skip
         .section(t("Trend", "Tendencia"))
@@ -528,6 +558,7 @@ ORDER BY location, kind DESC, yoe_range
 SELECT month::timestamptz AS time, {region_label} AS metric, sum(postings) AS value
 FROM gold.postings_monthly
 WHERE $__timeFilter(month::timestamptz) AND region IN ($region) AND {any_of("role", "role")}
+  AND {any_of("seniority", "seniority")}
 GROUP BY 1, region ORDER BY 1
 """, colors={region_names[c]: REGION_COLORS[c] for c in REGIONS},
                        description=t("Publication date from the source, or the first time it was seen. HN goes back to 2011.",
@@ -539,18 +570,27 @@ GROUP BY 1, region ORDER BY 1
             table(t("Companies with the most postings", "Empresas con más ofertas"),
                   f"""
 SELECT company AS "{t("Company", "Empresa")}", count(*) AS "{t("Postings", "Ofertas")}",
-       to_char(max(coalesce(published, first_seen)), 'YYYY-MM-DD') AS "{t("Latest", "Última")}"
-FROM silver.postings
+       to_char(max(posted_at), 'YYYY-MM-DD') AS "{t("Latest", "Última")}"
+FROM gold.jobs
 WHERE company IS NOT NULL AND last_seen > now() - interval '90 days' AND {posting_where}
 GROUP BY 1 ORDER BY 2 DESC LIMIT 50
 """, bars=t("Postings", "Ofertas")),
             barchart(t("Postings by role", "Ofertas por rol"),
                      f"""
 SELECT {role_label} AS "{t("Role", "Rol")}", count(*) AS "{t("Postings", "Ofertas")}"
-FROM silver.postings
+FROM gold.jobs
 WHERE last_seen > now() - interval '90 days' AND {posting_where}
 GROUP BY role ORDER BY 2 DESC
 """, x=t("Role", "Rol"), horizontal=True),
+            barchart(t("Postings by seniority", "Ofertas por nivel"),
+                     f"""
+SELECT {level_label} AS "{t("Seniority", "Nivel")}", count(*) AS "{t("Postings", "Ofertas")}"
+FROM gold.jobs
+WHERE last_seen > now() - interval '90 days' AND {posting_where}
+GROUP BY seniority ORDER BY {level_order}
+""", x=t("Seniority", "Nivel"), horizontal=True,
+                     description=t("From the job title. Most titles do not state it.",
+                                   "Deducido del título. La mayoría de títulos no lo indican.")),
         )  # fmt: skip
         .section(t("Technologies", "Tecnologías"))
         .line(
@@ -558,24 +598,24 @@ GROUP BY role ORDER BY 2 DESC
             barchart(t("Most asked · % of postings in the period", "Lo más pedido · % de las ofertas del periodo"),
                      f"""
 SELECT t.label AS "{t("Technology", "Tecnología")}",
-       round(100.0 * count(*) / nullif((SELECT count(*) FROM silver.postings
-                                         WHERE {posting_where} AND $__timeFilter(coalesce(published, first_seen))
+       round(100.0 * count(*) / nullif((SELECT count(*) FROM gold.jobs
+                                         WHERE {posting_where} AND $__timeFilter(posted_at)
                                         ), 0), 1) AS "{t("Postings", "Ofertas")}"
-FROM silver.postings p
+FROM gold.jobs p
 CROSS JOIN LATERAL unnest(p.technologies) AS u(key)
 JOIN silver.technologies t USING (key)
-WHERE {posting_where} AND $__timeFilter(coalesce(p.published, p.first_seen))
+WHERE {posting_where} AND $__timeFilter(p.posted_at)
 GROUP BY t.label ORDER BY 2 DESC, 1 LIMIT 20
 """, x=t("Technology", "Tecnología"), horizontal=True, unit="percent",
                      description=t("From the title and description of each posting, see src/jobpipe/tech.py.",
                                    "Sacado del título y la descripción de cada oferta, ver src/jobpipe/tech.py.")),
             timeseries(t("Share of postings asking for each technology, per month", "Porcentaje de ofertas que pide cada tecnología, por mes"),
                        f"""
-SELECT date_trunc('month', coalesce(p.published, p.first_seen)) AS time, t.label AS metric,
+SELECT date_trunc('month', p.posted_at) AS time, t.label AS metric,
        100.0 * count(*) FILTER (WHERE t.key = ANY(p.technologies)) / count(*) AS value
-FROM silver.postings p
+FROM gold.jobs p
 CROSS JOIN silver.technologies t
-WHERE t.key IN ($technology) AND {posting_where} AND $__timeFilter(coalesce(p.published, p.first_seen))
+WHERE t.key IN ($technology) AND {posting_where} AND $__timeFilter(p.posted_at)
 GROUP BY 1, 2 HAVING count(*) >= 10 ORDER BY 1
 """, style="line", unit="percent", colors=dict(zip(["Python", "SQL", "Kafka", "dbt"], [BLUE, INDIGO, PURPLE, FUCHSIA])),
                        description=t("Months with fewer than 10 postings are left out. HN goes back to 2011; the other sources only have what was open when collected.",
@@ -587,16 +627,16 @@ GROUP BY 1, 2 HAVING count(*) >= 10 ORDER BY 1
             table(t("Postings in the period · click the title to open the posting",
                     "Ofertas del periodo · clic en el puesto para abrir la oferta"),
                   f"""
-SELECT to_char(coalesce(p.published, p.first_seen), 'YYYY-MM-DD') AS "{t("Posted", "Publicada")}",
+SELECT to_char(p.posted_at, 'YYYY-MM-DD') AS "{t("Posted", "Publicada")}",
        p.company AS "{t("Company", "Empresa")}", p.title AS "{t("Title", "Puesto")}", {role_label} AS "{t("Role", "Rol")}",
-       coalesce(p.location, p.country) AS "{t("Location", "Lugar")}", (SELECT string_agg({region_label}, ', ') FROM unnest(p.regions) AS r(region)) AS "{t("Region", "Región")}",
+       {level_label} AS "{t("Seniority", "Nivel")}", p.place AS "{t("Location", "Lugar")}", (SELECT string_agg({region_label}, ', ') FROM unnest(p.regions) AS r(region)) AS "{t("Region", "Región")}",
        (SELECT string_agg(s.currency || ' ' || round(s.min_annual / 1000) || 'k–' || round(s.max_annual / 1000) || 'k', ' / ')
-          FROM silver.posted_salaries s
-         WHERE s.source = p.source AND s.source_id = p.source_id AND NOT s.predicted) AS "{t("Salary", "Salario")}",
-       p.source AS "{t("Source", "Fuente")}", p.url
-FROM silver.postings p
+          FROM gold.salaries s
+         WHERE s.job_id = p.job_id AND NOT s.predicted) AS "{t("Salary", "Salario")}",
+       array_to_string(p.sources, ', ') AS "{t("Source", "Fuente")}", p.url
+FROM gold.jobs p
 WHERE {posting_where}
-  AND $__timeFilter(coalesce(p.published, p.first_seen))
+  AND $__timeFilter(p.posted_at)
   AND (NOT ${{with_salary:raw}} OR {has_salary})
 ORDER BY 1 DESC NULLS LAST LIMIT 500
 """, overrides=link_to_posting(open_posting, t("Title", "Puesto"))),
@@ -618,11 +658,19 @@ ORDER BY 1 DESC NULLS LAST LIMIT 500
             stat(t("Last load into PostgreSQL", "Última carga en PostgreSQL"),
                  "SELECT extract(epoch FROM max(loaded_at)) * 1000 FROM silver.load_log", unit="dateTimeFromNow"),
             stat(t("Postings in silver", "Ofertas en silver"), "SELECT count(*) FROM silver.postings"),
+            stat(t("Distinct jobs", "Ofertas distintas"), "SELECT count(*) FROM gold.jobs",
+                 description=t("After merging postings of the same job, see src/jobpipe/dedup.py.",
+                               "Tras unir las publicaciones de una misma oferta, ver src/jobpipe/dedup.py.")),
             stat(t("Runs in the period", "Ejecuciones en el periodo"),
                  "SELECT count(*) FROM silver.ingest_runs WHERE $__timeFilter(coalesce(last_fetched, ingest_date::timestamptz))"),
             stat(t("Days without data (worst source)", "Días sin recoger (peor fuente)"),
                  "SELECT max(current_date - last_ingest) FROM gold.source_health WHERE source NOT IN ('adzuna_salary', 'levelsfyi')",
                  steps=[{"color": BLUE, "value": None}, {"color": PURPLE, "value": 2}, {"color": FUCHSIA, "value": 7}]),
+            stat(t("Postings with a country", "Ofertas con país"),
+                 "SELECT 100.0 * count(country) / nullif(count(*), 0) FROM silver.postings WHERE source <> 'hn'",
+                 unit="percent", decimals=1,
+                 description=t("Share of postings whose location was understood, HN left out. See src/jobpipe/places.py.",
+                               "Porcentaje de ofertas cuya ubicación se ha entendido, sin contar HN. Ver src/jobpipe/places.py.")),
         )  # fmt: skip
         .section(t("By source", "Por fuente"))
         .line(

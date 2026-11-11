@@ -207,8 +207,9 @@ def _feed(args: argparse.Namespace) -> int:
     rows = []
     for current in warehouse.current_postings(args.data_dir):
         posting = current.posting
-        m = match.match(profile, posting.title, current.role, posting.regions, current.technologies)
-        if current.is_open and m.fits:
+        m = match.match(profile, posting.title, current.role, posting.regions, current.technologies,
+                        current.seniority)  # fmt: skip
+        if current.is_open and current.job_rank == 0 and m.fits:
             rows.append((current, m))
     gaps = match.gaps(m for _, m in rows)
     shown = [
@@ -223,7 +224,9 @@ def _feed(args: argparse.Namespace) -> int:
         print(json.dumps({
             "postings": [{
                 "score": m.score, "title": c.posting.title, "company": c.posting.company,
-                "location": c.posting.location, "regions": list(c.posting.regions), "role": c.role,
+                "location": c.posting.location, "city": c.posting.place.city,
+                "countries": list(c.posting.countries), "remote": c.posting.place.remote,
+                "regions": list(c.posting.regions), "role": c.role, "seniority": c.seniority,
                 "have": list(m.have), "missing": list(m.missing), "first_seen": c.first_seen,
                 "url": c.posting.url, "source": c.posting.source,
             } for c, m in shown],

@@ -1,7 +1,7 @@
 """How well a posting fits you, from your profile (config/profile.toml).
 
-A posting fits when its role family, region and title pass the profile's
-filters. Its score is the share of the technologies it asks for that you
+A posting fits when its role family, region, seniority and title pass the
+profile's filters. Its score is the share of the technologies it asks for that you
 know: 3 of 4 is 75 %. A posting that names no catalogued technology gets no
 score rather than a perfect one, and sorts after the scored ones.
 
@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from jobpipe import roles, tech
+from jobpipe import roles, seniority, tech
 
 REGIONS = frozenset({"ch", "es", "eu", "other"})
 
@@ -35,6 +35,7 @@ class Profile:
     skills: frozenset[str]
     roles: frozenset[str] = frozenset()
     regions: frozenset[str] = frozenset()
+    seniority: frozenset[str] = frozenset()
     exclude_title: re.Pattern[str] | None = None
 
 
@@ -79,6 +80,7 @@ def parse_profile(text: str) -> Profile:
         skills=_keys(data, "skills", tech.BY_KEY),
         roles=_keys(data, "roles", (family.key for family in roles.ALL)),
         regions=_keys(data, "regions", REGIONS),
+        seniority=_keys(data, "seniority", seniority.ORDER),
         exclude_title=pattern,
     )
     if not profile.skills:
@@ -93,10 +95,14 @@ def load_profile(path: Path) -> Profile:
         raise ProfileError(f"{path}: {error}") from error
 
 
-def match(profile: Profile, title: str, role: str, regions: Iterable[str], technologies: Iterable[str]) -> Match:
+def match(
+    profile: Profile, title: str, role: str, regions: Iterable[str], technologies: Iterable[str],
+    seniority_key: str = seniority.UNSPECIFIED.key,
+) -> Match:  # fmt: skip
     technologies = tuple(technologies)
     fits = (
         (not profile.roles or role in profile.roles)
+        and (not profile.seniority or seniority_key in profile.seniority)
         and (not profile.regions or bool(profile.regions & (set(regions) or {"other"})))
         and not (profile.exclude_title and profile.exclude_title.search(title))
     )

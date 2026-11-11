@@ -11,5 +11,10 @@ roles = ["data", "devops", "backend"]
 # ch, es, eu (rest of Europe) and other (unknown or outside Europe). Empty means everywhere.
 regions = ["ch", "es", "eu"]
 
+# Seniority levels to keep, read from the title (src/jobpipe/seniority.py): intern, junior,
+# mid, senior, lead, head, and unspecified for titles that do not say (most of them).
+# Empty means every level.
+seniority = ["junior", "mid", "senior", "unspecified"]
+
 # Titles to skip, as a regex (case-insensitive). Single quotes keep backslashes as typed.
-exclude_title = 'intern|sales|principal|director|head of|\bvp\b'
+exclude_title = 'sales|account (executive|manager)'

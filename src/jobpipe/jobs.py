@@ -3,7 +3,7 @@
 Reads the newest snapshot of each posting in bronze and keeps only what a
 person scanning offers needs: title, company, place, link, dates, region and
 any salary range found for it. This is a read model for the UI, not the silver
-layer: no deduplication across sources yet.
+layer: postings of the same job are grouped later, see dedup.py.
 """
 
 from __future__ import annotations
@@ -13,10 +13,11 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator, Mapping
 
-from jobpipe import salary
+from jobpipe import places, salary
 from jobpipe.bronze import read_records
 
 SOURCES = ("greenhouse", "lever", "ashby", "smartrecruiters", "workable", "recruitee", "personio", "adzuna", "hn")
+REGION_OF = {"CH": "ch", "ES": "es", **{iso.upper(): "eu" for iso in salary.EUROPE_ISO}}
 
 
 @dataclass(frozen=True)
@@ -32,7 +33,12 @@ class Posting:
     fetched_at: str | None
     regions: tuple[str, ...]
     salaries: tuple[dict[str, Any], ...] = field(default_factory=tuple)
+    place: places.Place = field(default_factory=places.Place)  # normalised location, see places.py
     description: str = field(default="", repr=False)  # plain text, for technology extraction
+
+    @property
+    def countries(self) -> tuple[str, ...]:
+        return self.place.countries
 
     def text(self) -> str:
         return " ".join(filter(None, [self.title, self.company, self.location])).lower()
@@ -119,7 +125,7 @@ def _personio(record: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "title": job.get("name"),
         "company": job.get("subcompany") or record["payload"].get("board"),
-        "location": ", ".join(filter(None, [job.get("office"), *job.get("additionalOffices", [])])) or None,
+        "location": "; ".join(filter(None, [job.get("office"), *job.get("additionalOffices", [])])) or None,
         "url": job.get("url"),
         "description": " ".join(d.get("value") or "" for d in job.get("descriptions") or []),
     }
@@ -201,6 +207,8 @@ def to_posting(source: str, record: Mapping[str, Any]) -> Posting | None:
     if not fields.get("title"):
         return None
     location, country = fields.get("location"), fields.get("country")
+    place = places.parse(location, country, known_cities_only=source == "hn")
+    regions = salary.regions_of(location, country) | {REGION_OF.get(iso, "other") for iso in place.countries}
     return Posting(
         source=source,
         source_id=record["source_id"],
@@ -211,9 +219,10 @@ def to_posting(source: str, record: Mapping[str, Any]) -> Posting | None:
         url=fields.get("url"),
         published=record.get("event_time"),
         fetched_at=record.get("fetched_at"),
-        regions=tuple(sorted(salary.regions_of(location, country))),
+        regions=tuple(sorted(regions - {"other"})),
         salaries=tuple(_salary_view(s) for s in found),
         description=salary.plain_text(fields.get("description") or ""),
+        place=place,
     )
 
 

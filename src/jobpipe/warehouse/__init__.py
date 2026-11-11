@@ -13,13 +13,13 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
 from importlib import resources
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping
 
-from jobpipe import jobs, match, roles, tech
+from jobpipe import dedup, jobs, match, roles, seniority, tech
 from jobpipe.bronze import read_records
 from jobpipe.sources import adzuna, ats, levelsfyi
 
@@ -30,8 +30,9 @@ logger = logging.getLogger(__name__)
 DEFAULT_DSN = "postgresql://jobpipe:jobpipe@127.0.0.1:55432/jobpipe"
 
 POSTING_COLUMNS = (
-    "source", "source_id", "title", "company", "location", "country", "url",
-    "published", "first_seen", "last_seen", "snapshots", "is_open", "regions", "role", "technologies",
+    "source", "source_id", "title", "company", "location", "city", "country", "countries", "remote", "url",
+    "published", "first_seen", "last_seen", "snapshots", "is_open", "regions", "role", "seniority",
+    "technologies", "job_id", "job_rank",
 )  # fmt: skip
 MATCH_COLUMNS = ("source", "source_id", "fits", "score", "rank", "have", "missing")
 TECHNOLOGY_COLUMNS = ("key", "label", "category")
@@ -104,10 +105,19 @@ class Current:
     snapshots: int
     is_open: bool
     role: str
+    seniority: str
     technologies: tuple[str, ...]
+    job_id: str = ""  # postings of the same job share it, see dedup.py
+    job_rank: int = 0  # 0 for the posting that stands for the job
 
 
-def current_postings(data_dir: Path) -> Iterator[Current]:
+def current_postings(data_dir: Path) -> list[Current]:
+    """Every posting in bronze, once, grouped into jobs (see dedup.py)."""
+    found = list(_current_postings(data_dir))
+    return [replace(c, job_id=job_id, job_rank=rank) for c, (job_id, rank) in zip(found, dedup.group(found))]
+
+
+def _current_postings(data_dir: Path) -> Iterator[Current]:
     """Every posting in bronze, once.
 
     An ATS board is fetched whole, so a posting is open exactly when it was in
@@ -135,23 +145,26 @@ def current_postings(data_dir: Path) -> Iterator[Current]:
                 is_open = (posting.published or seen.first) >= cutoff
             yield Current(
                 posting, seen.first, seen.last, seen.snapshots, is_open, roles.role_of(posting.title),
+                seniority.seniority_of(posting.title),
                 tech.technologies_in(f"{posting.title}\n{posting.description}", posting.company),
             )
 
 
 def _postings(data_dir: Path, tables: Tables, profile: match.Profile | None) -> None:
     for current in current_postings(data_dir):
-        posting, source = current.posting, current.posting.source
+        posting, source, place = current.posting, current.posting.source, current.posting.place
         tables.postings.append((
-            source, posting.source_id, posting.title, posting.company, posting.location,
-            posting.country, posting.url, _ts(posting.published), _ts(current.first_seen),
-            _ts(current.last_seen), current.snapshots, current.is_open, list(posting.regions),
-            current.role, list(current.technologies),
+            source, posting.source_id, posting.title, posting.company, posting.location, place.city,
+            place.country, list(place.countries), place.remote, posting.url, _ts(posting.published),
+            _ts(current.first_seen), _ts(current.last_seen), current.snapshots, current.is_open,
+            list(posting.regions), current.role, current.seniority, list(current.technologies),
+            current.job_id, current.job_rank,
         ))  # fmt: skip
         for n, s in enumerate(dict.fromkeys(map(_salary_key, posting.salaries))):
             tables.posted_salaries.append((source, posting.source_id, n, *s))
         if profile is not None:
-            m = match.match(profile, posting.title, current.role, posting.regions, current.technologies)
+            m = match.match(profile, posting.title, current.role, posting.regions, current.technologies,
+                            current.seniority)
             tables.posting_matches.append((source, posting.source_id, m.fits, m.score, m.rank, list(m.have), list(m.missing)))
 
 
