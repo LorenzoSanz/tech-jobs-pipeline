@@ -10,7 +10,9 @@
 
 :root {
   --jp-radius: 14px;
-  --jp-radius-sm: 10px;
+  --jp-radius-control: 12px;
+  --jp-control-bg: rgba(30, 34, 52, 0.85);
+  --jp-control-border: rgba(129, 140, 248, 0.24);
   --jp-blue: #3b82f6;
   --jp-indigo: #6366f1;
   --jp-purple: #a855f7;
@@ -66,21 +68,119 @@ section[data-testid^="data-testid Panel header"] h2 {
   background: linear-gradient(90deg, var(--jp-blue), var(--jp-purple));
 }
 
-/* Filters: rounded pills with a tinted label. */
-[data-testid^="data-testid template variable"] {
-  border-radius: var(--jp-radius-sm);
-  overflow: hidden;
+/*
+ * Top bar. Grafana draws each filter as a label and a value box with their
+ * own square borders, and joins the time and refresh buttons into groups.
+ * Here every filter becomes one pill with a single border, and every button
+ * stands on its own, with room between them.
+ */
+[data-testid="data-testid dashboard controls"] {
+  gap: 12px 20px !important;
+  padding: 4px 0 14px;
 }
 
-[data-testid="data-testid dashboard controls"] label {
-  background: rgba(99, 102, 241, 0.16) !important;
-  border-color: rgba(129, 140, 248, 0.25) !important;
+[data-testid="data-testid dashboard controls"] > div {
+  gap: 12px !important;
+}
+
+/* Button groups (time range + zoom out, refresh + interval): split them. */
+[data-testid="data-testid dashboard controls"] > div > div:not([data-testid]) {
+  gap: 8px !important;
+}
+
+/* A filter: one pill, tinted label on the left, value on the right. */
+[data-testid^="data-testid template variable"] {
+  height: 36px;
+  border: 1px solid var(--jp-control-border);
+  border-radius: var(--jp-radius-control);
+  background: var(--jp-control-bg);
+  overflow: hidden;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+[data-testid^="data-testid template variable"]:hover {
+  border-color: var(--jp-border-hover);
+}
+
+[data-testid^="data-testid template variable"]:focus-within {
+  border-color: var(--jp-indigo);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
+}
+
+[data-testid^="data-testid template variable"] > label {
+  height: 100% !important;
+  padding: 0 12px !important;
+  border: none !important;
+  border-right: 1px solid var(--jp-control-border) !important;
+  border-radius: 0 !important;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.20), rgba(168, 85, 247, 0.20)) !important;
   color: var(--jp-lavender) !important;
   font-weight: 500;
 }
 
-[data-testid="data-testid dashboard controls"] button {
-  border-radius: var(--jp-radius-sm) !important;
+[data-testid^="data-testid template variable"] > div,
+[data-testid^="data-testid template variable"] > div > div {
+  height: 100% !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Selected values of a multi-value filter: small rounded chips. */
+[data-testid^="data-testid Dashboard template variables Variable Value DropDown"] > div:has(> button) {
+  height: 22px;
+  padding: 0 4px 0 10px !important;
+  border-radius: 999px !important;
+  background: rgba(99, 102, 241, 0.24) !important;
+  color: #e0e7ff;
+}
+
+[data-testid^="data-testid Dashboard template variables Variable Value DropDown"] > div:has(> button) button {
+  border-radius: 999px !important;
+}
+
+/* Buttons: time range, zoom out, refresh, interval, dashboard links. */
+:is(
+  [data-testid="data-testid TimePicker Open Button"],
+  [data-testid="data-testid TimePicker Open Button"] + button,
+  [data-testid="data-testid RefreshPicker run button"],
+  [data-testid="data-testid RefreshPicker interval button"],
+  [data-testid="data-testid Dashboard link dropdown"],
+  [data-testid="data-testid Dashboard link"]
+) {
+  height: 36px !important;
+  padding: 0 14px !important;
+  border: 1px solid var(--jp-control-border) !important;
+  border-radius: var(--jp-radius-control) !important;
+  background: var(--jp-control-bg) !important;
+  color: #e5e7f5 !important;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+:is(
+  [data-testid="data-testid TimePicker Open Button"] + button,
+  [data-testid="data-testid RefreshPicker interval button"]
+) {
+  padding: 0 10px !important;
+}
+
+:is(
+  [data-testid="data-testid TimePicker Open Button"],
+  [data-testid="data-testid TimePicker Open Button"] + button,
+  [data-testid="data-testid RefreshPicker run button"],
+  [data-testid="data-testid RefreshPicker interval button"],
+  [data-testid="data-testid Dashboard link dropdown"],
+  [data-testid="data-testid Dashboard link"]
+):hover {
+  border-color: var(--jp-border-hover) !important;
+  background: rgba(99, 102, 241, 0.18) !important;
+}
+
+/* The language switch stands out a little. */
+[data-testid="data-testid Dashboard link"] {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(168, 85, 247, 0.22)) !important;
 }
 
 /* Tables */
