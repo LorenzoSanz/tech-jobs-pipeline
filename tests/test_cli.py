@@ -120,12 +120,15 @@ class CliTest(unittest.TestCase):
 
         BronzeWriter(self.data_dir).write("ashby", [
             job("a1", "Data Engineer", "Python and Kafka"),
-            job("a2", "Data Engineer", "Python, SQL and Airflow"),
+            job("a2", "Data Platform Engineer", "Python, SQL and Airflow"),
             job("a3", "Data Engineer", "Python", location="Austin, TX"),
             job("a4", "Product Designer", "Figma"),
+            job("a5", "Data Engineer (m/w/d)", "Python and Kafka", location="Zürich"),  # same job as a1
+            job("a6", "Senior Data Engineer", "Python and SQL"),
         ])  # fmt: skip
         profile = self.root / "profile.toml"
-        profile.write_text('skills = ["python", "sql", "airflow"]\nroles = ["data"]\nregions = ["ch"]\n')
+        profile.write_text('skills = ["python", "sql", "airflow"]\nroles = ["data"]\nregions = ["ch"]\n'
+                           'seniority = ["junior", "mid", "unspecified"]\n')  # fmt: skip
 
         code, out = self.run_cli("feed", "--profile", str(profile), "--format", "json")
         text_code, text = self.run_cli("feed", "--profile", str(profile))
@@ -137,6 +140,16 @@ class CliTest(unittest.TestCase):
         self.assertEqual(feed["postings"][1]["missing"], ["kafka"])
         self.assertEqual(feed["gaps"], [{"technology": "kafka", "postings": 1, "share": 0.5}])
         self.assertIn("lacks: Kafka", text)
+
+        resume = self.root / "cv.md"
+        resume.write_text("Data Engineer. Python and Kafka.", encoding="utf-8")
+        cv_code, cv_out = self.run_cli("cv", "--profile", str(profile), "--cv", str(resume), "--format", "json")
+        no_documents, _ = self.run_cli("cv", "--profile", str(profile))
+
+        report = json.loads(cv_out)
+        self.assertEqual((cv_code, no_documents, report["postings"]), (0, 2, 2))
+        self.assertEqual(report["documents"][0]["to_add"], ["sql", "airflow"])
+        self.assertEqual(report["documents"][0]["titles"], ["data engineer"])
 
     def test_ingest_adzuna_salaries_one_run_per_search(self):
         transport = FakeTransport()

@@ -12,9 +12,10 @@ from __future__ import annotations
 import logging
 import re
 import urllib.parse
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any, Callable, Iterable, Iterator, Mapping
+from datetime import UTC, datetime
+from typing import Any
 from xml.etree import ElementTree
 
 from jobpipe import roles, salary
@@ -44,7 +45,7 @@ def _parse_iso(value: str | None) -> datetime | None:
     if not value:
         return None
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
 def _path(board: str) -> str:
@@ -72,7 +73,7 @@ def lever_jobs(http: HttpClient, board: str) -> Iterator[RawItem]:
             created = job.get("createdAt")
             yield RawItem(
                 source_id=f"{board}:{job['id']}",
-                event_time=datetime.fromtimestamp(created / 1000, tz=timezone.utc) if created else None,
+                event_time=datetime.fromtimestamp(created / 1000, tz=UTC) if created else None,
                 payload={"board": board, "job": job},
             )
         if len(page) < LEVER_PAGE_SIZE:

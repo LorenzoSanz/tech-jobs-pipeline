@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from jobpipe.sources import adzuna
 from tests.fakes import FakeTransport, fast_client
@@ -21,7 +21,7 @@ class AdzunaTest(unittest.TestCase):
 
         self.assertEqual(len(items), adzuna.RESULTS_PER_PAGE + 1)
         self.assertEqual(items[-1].source_id, "ch:999")
-        self.assertEqual(items[0].event_time, datetime(2026, 11, 8, 7, tzinfo=timezone.utc))
+        self.assertEqual(items[0].event_time, datetime(2026, 11, 8, 7, tzinfo=UTC))
         self.assertTrue(transport.urls()[1].startswith("https://api.adzuna.com/v1/api/jobs/ch/search/2?"))
         query = transport.query(0)
         self.assertEqual(query["category"], "it-jobs")

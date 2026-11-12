@@ -14,8 +14,9 @@ Amounts come back in USD unless stated otherwise. Data shown publicly must say
 
 from __future__ import annotations
 
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Iterator, Sequence
+from typing import Any
 
 from jobpipe.bronze import RawItem
 from jobpipe.http import HttpClient

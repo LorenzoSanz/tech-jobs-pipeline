@@ -8,9 +8,10 @@ posting. Replies are dropped: they are questions to the poster, not postings.
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
-from typing import Any, Iterator
+from datetime import UTC, date, datetime
+from typing import Any
 
 from jobpipe.bronze import RawItem
 from jobpipe.http import HttpClient
@@ -31,7 +32,7 @@ class HiringThread:
 
 def _timestamp(item: dict[str, Any]) -> datetime | None:
     if item.get("created_at_i") is not None:
-        return datetime.fromtimestamp(int(item["created_at_i"]), tz=timezone.utc)
+        return datetime.fromtimestamp(int(item["created_at_i"]), tz=UTC)
     if item.get("created_at"):
         return datetime.fromisoformat(item["created_at"].replace("Z", "+00:00"))
     return None

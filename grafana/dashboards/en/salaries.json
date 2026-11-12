@@ -66,6 +66,44 @@
         }
       },
       {
+        "type": "custom",
+        "name": "tier",
+        "label": "Company type",
+        "description": "FAANG + Microsoft, other big tech, or the rest. See src/jobpipe/employers.py.",
+        "multi": true,
+        "includeAll": false,
+        "query": "FAANG + Microsoft : faang,Big tech : big_tech,Other companies : other",
+        "options": [
+          {
+            "text": "FAANG + Microsoft",
+            "value": "faang",
+            "selected": true
+          },
+          {
+            "text": "Big tech",
+            "value": "big_tech",
+            "selected": true
+          },
+          {
+            "text": "Other companies",
+            "value": "other",
+            "selected": true
+          }
+        ],
+        "current": {
+          "text": [
+            "FAANG + Microsoft",
+            "Big tech",
+            "Other companies"
+          ],
+          "value": [
+            "faang",
+            "big_tech",
+            "other"
+          ]
+        }
+      },
+      {
         "type": "query",
         "name": "role",
         "label": "Role",
@@ -76,6 +114,31 @@
         },
         "query": "SELECT role AS __value, CASE role WHEN 'product' THEN 'Product & design' WHEN 'eng_management' THEN 'Engineering management' WHEN 'ml' THEN 'ML / AI' WHEN 'data' THEN 'Data' WHEN 'devops' THEN 'DevOps / SRE / Platform' WHEN 'security' THEN 'Security' WHEN 'mobile' THEN 'Mobile' WHEN 'qa' THEN 'QA / Testing' WHEN 'embedded' THEN 'Embedded / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Engineering (general)' WHEN 'other' THEN 'Other (non-tech)' ELSE role END AS __text FROM gold.salaries GROUP BY role ORDER BY count(*) DESC",
         "definition": "SELECT role AS __value, CASE role WHEN 'product' THEN 'Product & design' WHEN 'eng_management' THEN 'Engineering management' WHEN 'ml' THEN 'ML / AI' WHEN 'data' THEN 'Data' WHEN 'devops' THEN 'DevOps / SRE / Platform' WHEN 'security' THEN 'Security' WHEN 'mobile' THEN 'Mobile' WHEN 'qa' THEN 'QA / Testing' WHEN 'embedded' THEN 'Embedded / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Engineering (general)' WHEN 'other' THEN 'Other (non-tech)' ELSE role END AS __text FROM gold.salaries GROUP BY role ORDER BY count(*) DESC",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "sort": 0,
+        "allValue": "'__all'",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "type": "query",
+        "name": "seniority",
+        "label": "Seniority",
+        "description": "From the job title. Most titles do not state it.",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "jobpipe-pg"
+        },
+        "query": "SELECT seniority AS __value, CASE seniority WHEN 'intern' THEN 'Intern / trainee' WHEN 'head' THEN 'Head / director' WHEN 'lead' THEN 'Lead / staff / principal' WHEN 'senior' THEN 'Senior' WHEN 'junior' THEN 'Junior' WHEN 'mid' THEN 'Mid-level' WHEN 'unspecified' THEN 'Not stated' ELSE seniority END AS __text FROM gold.salaries GROUP BY seniority ORDER BY array_position(ARRAY['intern', 'head', 'lead', 'senior', 'junior', 'mid', 'unspecified'], seniority)",
+        "definition": "SELECT seniority AS __value, CASE seniority WHEN 'intern' THEN 'Intern / trainee' WHEN 'head' THEN 'Head / director' WHEN 'lead' THEN 'Lead / staff / principal' WHEN 'senior' THEN 'Senior' WHEN 'junior' THEN 'Junior' WHEN 'mid' THEN 'Mid-level' WHEN 'unspecified' THEN 'Not stated' ELSE seniority END AS __text FROM gold.salaries GROUP BY seniority ORDER BY array_position(ARRAY['intern', 'head', 'lead', 'senior', 'junior', 'mid', 'unspecified'], seniority)",
         "refresh": 1,
         "multi": true,
         "includeAll": true,
@@ -509,7 +572,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT count(*) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
+          "rawSql": "SELECT count(*) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
         }
       ],
       "options": {
@@ -576,7 +639,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT percentile_cont(0.25) WITHIN GROUP (ORDER BY midpoint) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
+          "rawSql": "SELECT percentile_cont(0.25) WITHIN GROUP (ORDER BY midpoint) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
         }
       ],
       "options": {
@@ -643,7 +706,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY midpoint) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
+          "rawSql": "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY midpoint) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
         }
       ],
       "options": {
@@ -710,7 +773,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT percentile_cont(0.75) WITHIN GROUP (ORDER BY midpoint) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
+          "rawSql": "SELECT percentile_cont(0.75) WITHIN GROUP (ORDER BY midpoint) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
         }
       ],
       "options": {
@@ -777,7 +840,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT percentile_cont(0.9) WITHIN GROUP (ORDER BY midpoint) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
+          "rawSql": "SELECT percentile_cont(0.9) WITHIN GROUP (ORDER BY midpoint) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
         }
       ],
       "options": {
@@ -844,7 +907,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT 100.0 * avg((midpoint <= ${offer:sqlstring}::numeric)::int) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
+          "rawSql": "SELECT 100.0 * avg((midpoint <= ${offer:sqlstring}::numeric)::int) FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
         }
       ],
       "options": {
@@ -936,7 +999,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT midpoint AS \"Midpoint\" FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
+          "rawSql": "SELECT midpoint AS \"Midpoint\" FROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)"
         }
       ],
       "options": {
@@ -965,7 +1028,7 @@
       "gridPos": {
         "x": 0,
         "y": 6,
-        "w": 12,
+        "w": 6,
         "h": 9
       },
       "id": 9
@@ -988,7 +1051,114 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT CASE role WHEN 'product' THEN 'Product & design' WHEN 'eng_management' THEN 'Engineering management' WHEN 'ml' THEN 'ML / AI' WHEN 'data' THEN 'Data' WHEN 'devops' THEN 'DevOps / SRE / Platform' WHEN 'security' THEN 'Security' WHEN 'mobile' THEN 'Mobile' WHEN 'qa' THEN 'QA / Testing' WHEN 'embedded' THEN 'Embedded / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Engineering (general)' WHEN 'other' THEN 'Other (non-tech)' ELSE role END AS \"Role\", count(*) AS \"Postings\",\n       percentile_cont(0.25) WITHIN GROUP (ORDER BY midpoint) AS \"p25\",\n       percentile_cont(0.5)  WITHIN GROUP (ORDER BY midpoint) AS \"Median\",\n       percentile_cont(0.75) WITHIN GROUP (ORDER BY midpoint) AS \"p75\"\nFROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)\n\nGROUP BY role ORDER BY 4 DESC"
+          "rawSql": "SELECT CASE role WHEN 'product' THEN 'Product & design' WHEN 'eng_management' THEN 'Engineering management' WHEN 'ml' THEN 'ML / AI' WHEN 'data' THEN 'Data' WHEN 'devops' THEN 'DevOps / SRE / Platform' WHEN 'security' THEN 'Security' WHEN 'mobile' THEN 'Mobile' WHEN 'qa' THEN 'QA / Testing' WHEN 'embedded' THEN 'Embedded / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Engineering (general)' WHEN 'other' THEN 'Other (non-tech)' ELSE role END AS \"Role\", count(*) AS \"Postings\",\n       percentile_cont(0.25) WITHIN GROUP (ORDER BY midpoint) AS \"p25\",\n       percentile_cont(0.5)  WITHIN GROUP (ORDER BY midpoint) AS \"Median\",\n       percentile_cont(0.75) WITHIN GROUP (ORDER BY midpoint) AS \"p75\"\nFROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)\n\nGROUP BY role ORDER BY 4 DESC"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "custom": {
+            "align": "auto",
+            "filterable": false,
+            "inspect": false,
+            "minWidth": 70
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Role|Rol"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "p25|Median|p75"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Median"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlPu"
+                }
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 150
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 6,
+        "w": 6,
+        "h": 9
+      },
+      "id": 10
+    },
+    {
+      "type": "table",
+      "title": "By seniority",
+      "description": "Seniority comes from the title; most titles do not state it.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT CASE seniority WHEN 'intern' THEN 'Intern / trainee' WHEN 'head' THEN 'Head / director' WHEN 'lead' THEN 'Lead / staff / principal' WHEN 'senior' THEN 'Senior' WHEN 'junior' THEN 'Junior' WHEN 'mid' THEN 'Mid-level' WHEN 'unspecified' THEN 'Not stated' ELSE seniority END AS \"Seniority\", count(*) AS \"Postings\",\n       percentile_cont(0.25) WITHIN GROUP (ORDER BY midpoint) AS \"p25\",\n       percentile_cont(0.5)  WITHIN GROUP (ORDER BY midpoint) AS \"Median\",\n       percentile_cont(0.75) WITHIN GROUP (ORDER BY midpoint) AS \"p75\"\nFROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)\n\nGROUP BY seniority ORDER BY array_position(ARRAY['intern', 'head', 'lead', 'senior', 'junior', 'mid', 'unspecified'], seniority)"
         }
       ],
       "options": {
@@ -1072,10 +1242,117 @@
       "gridPos": {
         "x": 12,
         "y": 6,
-        "w": 12,
+        "w": 6,
         "h": 9
       },
-      "id": 10
+      "id": 11
+    },
+    {
+      "type": "table",
+      "title": "By company",
+      "description": "What big tech posts compared with everyone else, in the chosen currency.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "jobpipe-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "jobpipe-pg"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT CASE company_tier WHEN 'faang' THEN 'FAANG + Microsoft' WHEN 'big_tech' THEN 'Big tech' WHEN 'other' THEN 'Other companies' ELSE company_tier END AS \"Company\", count(*) AS \"Postings\",\n       percentile_cont(0.25) WITHIN GROUP (ORDER BY midpoint) AS \"p25\",\n       percentile_cont(0.5)  WITHIN GROUP (ORDER BY midpoint) AS \"Median\",\n       percentile_cont(0.75) WITHIN GROUP (ORDER BY midpoint) AS \"p75\"\nFROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)\n\nGROUP BY company_tier ORDER BY 4 DESC"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "custom": {
+            "align": "auto",
+            "filterable": false,
+            "inspect": false,
+            "minWidth": 70
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Role|Rol"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "p25|Median|p75"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Median"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlPu"
+                }
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 150
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 6,
+        "w": 6,
+        "h": 9
+      },
+      "id": 12
     },
     {
       "type": "row",
@@ -1088,7 +1365,7 @@
         "w": 24,
         "h": 1
       },
-      "id": 11
+      "id": 13
     },
     {
       "type": "table",
@@ -1108,7 +1385,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT company AS \"Company\", title AS \"Title\", CASE role WHEN 'product' THEN 'Product & design' WHEN 'eng_management' THEN 'Engineering management' WHEN 'ml' THEN 'ML / AI' WHEN 'data' THEN 'Data' WHEN 'devops' THEN 'DevOps / SRE / Platform' WHEN 'security' THEN 'Security' WHEN 'mobile' THEN 'Mobile' WHEN 'qa' THEN 'QA / Testing' WHEN 'embedded' THEN 'Embedded / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Engineering (general)' WHEN 'other' THEN 'Other (non-tech)' ELSE role END AS \"Role\",\n       coalesce(location, country) AS \"Location\",\n       min_annual AS \"Min\", max_annual AS \"Max\",\n       to_char(posted_at, 'YYYY-MM-DD') AS \"Posted\", source AS \"Source\", url\nFROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)\n\nORDER BY max_annual DESC LIMIT 100"
+          "rawSql": "SELECT company AS \"Company\", title AS \"Title\", CASE role WHEN 'product' THEN 'Product & design' WHEN 'eng_management' THEN 'Engineering management' WHEN 'ml' THEN 'ML / AI' WHEN 'data' THEN 'Data' WHEN 'devops' THEN 'DevOps / SRE / Platform' WHEN 'security' THEN 'Security' WHEN 'mobile' THEN 'Mobile' WHEN 'qa' THEN 'QA / Testing' WHEN 'embedded' THEN 'Embedded / Hardware' WHEN 'fullstack' THEN 'Full-stack' WHEN 'frontend' THEN 'Frontend' WHEN 'backend' THEN 'Backend' WHEN 'engineering' THEN 'Engineering (general)' WHEN 'other' THEN 'Other (non-tech)' ELSE role END AS \"Role\",\n       CASE seniority WHEN 'intern' THEN 'Intern / trainee' WHEN 'head' THEN 'Head / director' WHEN 'lead' THEN 'Lead / staff / principal' WHEN 'senior' THEN 'Senior' WHEN 'junior' THEN 'Junior' WHEN 'mid' THEN 'Mid-level' WHEN 'unspecified' THEN 'Not stated' ELSE seniority END AS \"Seniority\", coalesce(city || ', ' || country, location, country) AS \"Location\",\n       min_annual AS \"Min\", max_annual AS \"Max\",\n       to_char(posted_at, 'YYYY-MM-DD') AS \"Posted\", source AS \"Source\", url\nFROM gold.salaries WHERE \ncurrency = ${currency:sqlstring}\n  AND coalesce(nullif(regions, '{}'), '{other}') && ARRAY[$region]::text[]\n  AND company_tier IN ($tier)\n  AND ('__all' IN ($role) OR role IN ($role))\n  AND ('__all' IN ($seniority) OR seniority IN ($seniority))\n  AND (NOT predicted OR ${predicted:raw})\n  AND $__timeFilter(posted_at)\n\nORDER BY max_annual DESC LIMIT 100"
         }
       ],
       "options": {
@@ -1229,7 +1506,7 @@
         "w": 24,
         "h": 13
       },
-      "id": 12
+      "id": 14
     },
     {
       "type": "row",
@@ -1242,7 +1519,7 @@
         "w": 24,
         "h": 1
       },
-      "id": 13
+      "id": 15
     },
     {
       "type": "barchart",
@@ -1302,7 +1579,7 @@
         "w": 12,
         "h": 9
       },
-      "id": 14
+      "id": 16
     },
     {
       "type": "timeseries",
@@ -1361,7 +1638,7 @@
         "w": 12,
         "h": 9
       },
-      "id": 15
+      "id": 17
     },
     {
       "type": "table",
@@ -1468,7 +1745,7 @@
         "w": 24,
         "h": 9
       },
-      "id": 16
+      "id": 18
     }
   ]
 }

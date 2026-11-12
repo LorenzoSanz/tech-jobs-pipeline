@@ -17,7 +17,8 @@ class ProfileTest(unittest.TestCase):
     def test_example_profile_is_valid(self):
         profile = match.load_profile(EXAMPLE)
         self.assertIn("python", profile.skills)
-        self.assertTrue(profile.exclude_title.search("VP Engineering"))
+        self.assertTrue(profile.exclude_title.search("Enterprise Account Executive"))
+        self.assertIn("unspecified", profile.seniority)
 
     def test_unknown_names_are_rejected_with_the_valid_ones(self):
         with self.assertRaisesRegex(match.ProfileError, "unknown skills: pyhton.*python"):
@@ -43,6 +44,20 @@ class MatchTest(unittest.TestCase):
         self.assertFalse(match.match(PROFILE, "Data Engineer", "data", [], []).fits)  # unknown region is "other"
         everywhere = match.Profile(skills=frozenset({"sql"}))
         self.assertTrue(match.match(everywhere, "Anything", "other", [], []).fits)
+
+    def test_seniority_filter(self):
+        profile = match.parse_profile('skills = ["sql"]\nseniority = ["mid", "unspecified"]')
+
+        self.assertTrue(match.match(profile, "Data Engineer", "data", ["ch"], []).fits)
+        self.assertTrue(match.match(profile, "Data Engineer II", "data", ["ch"], [], "mid").fits)
+        self.assertFalse(match.match(profile, "Head of Data", "data", ["ch"], [], "head").fits)
+        big_tech = match.parse_profile('skills = ["sql"]\ncompany_tiers = ["faang", "big_tech"]')
+        self.assertTrue(match.match(big_tech, "SWE", "backend", ["ch"], [], company_tier="faang").fits)
+        self.assertFalse(match.match(big_tech, "SWE", "backend", ["ch"], []).fits)  # "other" by default
+        with self.assertRaisesRegex(match.ProfileError, "unknown company_tiers: faamg"):
+            match.parse_profile('skills = ["sql"]\ncompany_tiers = ["faamg"]')
+        with self.assertRaisesRegex(match.ProfileError, "unknown seniority: medior"):
+            match.parse_profile('skills = ["sql"]\nseniority = ["medior"]')
 
     def test_rank_needs_evidence(self):
         def rank(have, missing):

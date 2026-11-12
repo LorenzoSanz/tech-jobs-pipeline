@@ -6,10 +6,11 @@ import hashlib
 import json
 import os
 import uuid
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator
+from typing import Any
 
 SCHEMA_VERSION = 1
 
@@ -32,11 +33,11 @@ class WriteResult:
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def new_run_id(now: datetime) -> str:
-    return f"{now.astimezone(timezone.utc):%Y%m%dT%H%M%SZ}-{uuid.uuid4().hex[:8]}"
+    return f"{now.astimezone(UTC):%Y%m%dT%H%M%SZ}-{uuid.uuid4().hex[:8]}"
 
 
 def canonical_json(value: Any) -> str:
@@ -52,7 +53,7 @@ def _iso(value: datetime | None) -> str | None:
         return None
     if value.tzinfo is None:
         raise ValueError(f"naive datetime is ambiguous: {value!r}")
-    return value.astimezone(timezone.utc).isoformat()
+    return value.astimezone(UTC).isoformat()
 
 
 class BronzeWriter:

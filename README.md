@@ -19,7 +19,8 @@ Only APIs intended for third parties are used. LinkedIn and jobs.ch are
 excluded because their terms forbid automated collection. See
 [ADR 0001](docs/adr/0001-data-sources.md) and
 [ADR 0003](docs/adr/0003-geographic-scope-and-excluded-sources.md); the last
-four ATS were added in [ADR 0007](docs/adr/0007-more-ats-boards.md).
+four ATS were added in [ADR 0007](docs/adr/0007-more-ats-boards.md) and the
+boards of big tech companies in [ADR 0009](docs/adr/0009-big-tech-employers.md).
 
 | Source | What it adds | Auth |
 | --- | --- | --- |
@@ -46,6 +47,11 @@ collecting again. Time semantics are defined in
 [ADR 0002](docs/adr/0002-bronze-layer-and-time-semantics.md). Silver and gold
 live in PostgreSQL and are rebuilt from bronze on every load
 ([ADR 0005](docs/adr/0005-warehouse-and-dashboards.md)).
+
+On the way to silver every posting gets a city, ISO country codes and a remote
+flag, a seniority level read from its title, and a job id: the same job posted
+on several sources or once per city is counted once in the dashboards
+([ADR 0008](docs/adr/0008-cleaning-postings.md)).
 
 ## Usage
 
@@ -96,15 +102,49 @@ levels.fyi by hand.
 ### Postings that fit you
 
 ```bash
-cp config/profile.example.toml config/profile.toml   # list your skills, roles and regions
+cp config/profile.example.toml config/profile.toml   # list your skills, roles, regions and seniority
 jobpipe feed                     # open postings, best match first, with what each one asks that you lack
 jobpipe feed --days 7 --min-score 50
+jobpipe feed --tier faang --tier big_tech   # only FAANG + Microsoft and other big tech
 ```
+
+Big tech employers are recognised whatever name they publish under
+("Google Switzerland GmbH", "Amazon Web Services EMEA SARL"), see
+`src/jobpipe/employers.py`. FAANG career sites have no public API and Amazon's
+terms forbid automated access, so their postings come from Adzuna and HN only
+([ADR 0009](docs/adr/0009-big-tech-employers.md)). Many other big tech
+companies publish on public boards and are collected directly: Databricks,
+OpenAI, Anthropic, Snowflake, Spotify, Airbnb, LinkedIn, ServiceNow, Wise and
+about 35 more, all in `config/boards.toml`.
 
 Each posting's technologies are found in its title and description
 (`src/jobpipe/tech.py`). The match is the share of them you know; the feed
 ends with the technologies you lack most often in the postings that fit you.
 See [ADR 0006](docs/adr/0006-technologies-and-matching.md).
+
+### Your CV and LinkedIn against those postings
+
+```bash
+mkdir private   # gitignored: your CV and LinkedIn export never reach git
+jobpipe cv --cv private/cv.md --linkedin private/linkedin-export.zip
+jobpipe cv --cv private/cv-v1.docx --cv private/cv-v2.docx --tier faang --tier big_tech
+```
+
+Recruiters search LinkedIn by keyword and many application systems filter
+CVs the same way. The report lists the technologies the postings that fit you
+ask for most, which of them each document names, and how much of that demand
+it covers. Then it gives:
+
+- what to add: skills in your profile that a document never names;
+- what to learn: technologies the postings ask for and you lack;
+- skills a document names that your profile is missing;
+- the job titles the postings use most ("platform engineer", "ingeniero de
+  datos") and which documents say them.
+
+CVs are read as text, Markdown or .docx. LinkedIn comes from its data export
+(Settings, Data privacy, Get a copy of your data). Only the headline, about,
+skills and positions are read; the address, contacts and messages in the
+export are never opened (`src/jobpipe/cv.py`).
 
 ### Dashboards
 
@@ -121,17 +161,20 @@ Then open http://localhost:3000. Four dashboards, in English and Spanish
 
 - **For you** (the home page): open postings that fit your profile, best
   match first, and what to learn: the technologies they ask for that you lack.
-- **Salaries**: p25 / median / p75 / p90 by region, role and currency, where
+- **Salaries**: p25 / median / p75 / p90 by region, role, seniority, company tier and currency, where
   your offer falls, best-paying postings with links, Adzuna histograms,
   Levels.fyi.
-- **Market and postings**: postings per month and region, who is hiring, the
-  most asked technologies and their share per month, and the list of postings.
+- **Market and postings**: postings per month and region, who is hiring, big
+  tech with open jobs, the most asked technologies and their share per month,
+  and the list of postings.
 - **Pipeline health**: runs and records per source, days since the last
-  collection.
+  collection, distinct jobs and the share of postings whose location was
+  understood.
 
 Every filter is a dropdown. Roles are grouped from the posting title
 (`src/jobpipe/roles.py`), so "Data Engineer" and "Senior Data Engineer,
-Platform" both land in *Data*.
+Platform" both land in *Data*; seniority comes from the title too
+(`src/jobpipe/seniority.py`).
 
 The dashboards are generated by `grafana/build_dashboards.py`: edit that and
 rerun it rather than editing the JSON (CI fails if they differ). The rounded,
@@ -142,12 +185,44 @@ to local-only values; copy `.env.example` to `.env` to change them.
 ## Development
 
 ```bash
+pip install -e .[dev,db] # ruff, mypy and hypothesis pinned; psycopg for the type checks
+ruff check src tests grafana benchmarks
+mypy                     # --strict, configured in pyproject.toml
 PYTHONPATH=src python -m unittest discover -s tests -t .
 
 # Against PostgreSQL too: loads a fixture into the jobpipe_test database
 # (never the real one) and runs every dashboard query
 JOBPIPE_TEST_DATABASE_URL=postgresql://jobpipe:jobpipe@127.0.0.1:55432/jobpipe_test \
   PYTHONPATH=src python -m unittest tests.test_warehouse
+```
+
+`tests/test_properties.py` checks rules that must hold for any input with
+Hypothesis: every title gets a known level and role, title normalisation is
+stable, grouping into jobs does not depend on input order, salary ranges stay
+ordered. It found that "Data Engineer, FULL:TIME" was not recognised as
+"Data Engineer".
+
+### Load benchmark
+
+`benchmarks/load.py` writes synthetic bronze (three daily runs, a tenth of
+the postings replaced each day, a quarter also on Adzuna) and times a load:
+
+| Open postings | Bronze records | Build (Python) | Write (PostgreSQL) |
+| ---: | ---: | ---: | ---: |
+| 2,000 | 7,500 | 0.8 s | 0.3 s |
+| 10,000 | 37,500 | 4.2 s | 0.5 s |
+| 50,000 | 187,500 | 21.3 s | 2.1 s |
+
+About 8,800 records per second on a laptop, linear in the size of bronze; the
+real data today is about 2,000 postings. Finding technologies took three
+quarters of the build (80 regular expressions over every description) until
+each one was given plain words to look for first: a substring test skips most
+of them, and the build of 2,000 postings went from 3.1 s to 0.8 s with the same
+result, which a property test checks.
+
+```bash
+PYTHONPATH=src python benchmarks/load.py --postings 2000 10000 50000 \
+  --dsn postgresql://jobpipe:jobpipe@127.0.0.1:55432/jobpipe_test
 ```
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/);
@@ -157,14 +232,17 @@ CI checks every PR. Decisions that are hard to reverse get an ADR in `docs/adr/`
 
 1. **Ingestion (bronze)** — HN, ATS boards, Adzuna. *Done.*
 2. **Scheduling** — daily CronJobs on a local k3d cluster; HN monthly.
-3. **Streaming** — collectors publish to Apache Kafka (Strimzi); bronze becomes a consumer.
-4. **Silver** — PostgreSQL with first_seen/last_seen per posting. *Started.*
-   Next: deduplication across sources, location and seniority normalisation.
-5. **Gold** — salary, market and "for you" dashboards in Grafana, technology
-   extraction and matching. *Started.* Next: gold models in dbt, more Swiss
-   and Spanish sources.
-6. **Observability** — pipeline health dashboard. *Started.* Next: alerts when a
+3. **Silver** — PostgreSQL with first_seen/last_seen per posting, normalised
+   places and seniority, one job id across sources. *Done.*
+4. **Gold** — salary, market and "for you" dashboards in Grafana, technology
+   extraction and matching, counts per job. *Started.* Next: gold models in
+   dbt, more Swiss and Spanish sources.
+5. **Observability** — pipeline health dashboard. *Started.* Next: alerts when a
    source returns nothing.
+
+Streaming (Kafka) was considered and left out: sources are polled once a day,
+so a queue between collectors and bronze would add moving parts without
+changing what the data can answer.
 
 ## Data and attribution
 

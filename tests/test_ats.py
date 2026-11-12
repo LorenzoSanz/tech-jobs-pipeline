@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from jobpipe.sources import ats
 from tests.fakes import FakeTransport, fast_client
@@ -25,7 +25,7 @@ class GreenhouseTest(unittest.TestCase):
         [item] = ats.greenhouse_jobs(fast_client(transport), "acme")
 
         self.assertEqual(item.source_id, "acme:4532353101")
-        self.assertEqual(item.event_time, datetime(2026, 10, 20, 13, 30, tzinfo=timezone.utc))
+        self.assertEqual(item.event_time, datetime(2026, 10, 20, 13, 30, tzinfo=UTC))
         self.assertEqual(item.payload["board"], "acme")
         self.assertEqual(transport.urls(), ["https://boards-api.greenhouse.io/v1/boards/acme/jobs?content=true"])
 
@@ -48,7 +48,7 @@ class LeverTest(unittest.TestCase):
         items = list(ats.lever_jobs(fast_client(transport), "acme"))
 
         self.assertEqual(len(items), ats.LEVER_PAGE_SIZE + 1)
-        self.assertEqual(items[0].event_time, datetime.fromtimestamp(1761900000, tz=timezone.utc))
+        self.assertEqual(items[0].event_time, datetime.fromtimestamp(1761900000, tz=UTC))
         self.assertIsNone(items[-1].event_time)
         self.assertEqual(transport.query(1)["skip"], str(ats.LEVER_PAGE_SIZE))
 
@@ -71,7 +71,7 @@ class AshbyTest(unittest.TestCase):
 
         [item] = ats.ashby_jobs(fast_client(transport), "acme")
 
-        self.assertEqual(item.event_time, datetime(2026, 9, 15, 8, tzinfo=timezone.utc))
+        self.assertEqual(item.event_time, datetime(2026, 9, 15, 8, tzinfo=UTC))
         self.assertEqual(transport.query(0), {"includeCompensation": "true"})
 
 
@@ -91,7 +91,7 @@ class SmartRecruitersTest(unittest.TestCase):
         self.assertEqual([i.source_id for i in items], ["Acme:1", "Acme:2", "Acme:3"])
         self.assertIn("jobAd", items[0].payload["job"])
         self.assertNotIn("jobAd", items[1].payload["job"])
-        self.assertEqual(items[0].event_time, datetime(2026, 11, 1, 10, tzinfo=timezone.utc))
+        self.assertEqual(items[0].event_time, datetime(2026, 11, 1, 10, tzinfo=UTC))
         self.assertEqual(transport.query(1)["offset"], "2")
         self.assertEqual(transport.urls()[2], f"{ats.SMARTRECRUITERS_API}/Acme/postings/1")  # fmt: skip
 
@@ -104,7 +104,7 @@ class WorkableTest(unittest.TestCase):
         [item] = ats.workable_jobs(fast_client(transport), "acme")
 
         self.assertEqual(item.source_id, "acme:2FAA7C")
-        self.assertEqual(item.event_time, datetime(2026, 10, 2, tzinfo=timezone.utc))
+        self.assertEqual(item.event_time, datetime(2026, 10, 2, tzinfo=UTC))
         self.assertEqual(transport.query(0), {"details": "true"})
 
 
@@ -116,7 +116,7 @@ class RecruiteeTest(unittest.TestCase):
         [item] = ats.recruitee_jobs(fast_client(transport), "acme")
 
         self.assertEqual(transport.urls(), ["https://acme.recruitee.com/api/offers/"])
-        self.assertEqual(item.event_time, datetime(2026, 11, 3, 20, 8, 14, tzinfo=timezone.utc))
+        self.assertEqual(item.event_time, datetime(2026, 11, 3, 20, 8, 14, tzinfo=UTC))
 
     def test_a_board_name_cannot_change_the_host(self):
         for board in ("evil.com/x", "a.b", "Acme", ""):
@@ -141,7 +141,7 @@ class PersonioTest(unittest.TestCase):
 
         job = item.payload["job"]
         self.assertEqual(item.source_id, "acme:42")
-        self.assertEqual(item.event_time, datetime(2026, 11, 1, 8, tzinfo=timezone.utc))
+        self.assertEqual(item.event_time, datetime(2026, 11, 1, 8, tzinfo=UTC))
         self.assertEqual((job["name"], job["office"], job["additionalOffices"]), ("Data Engineer", "Zurich", ["Madrid"]))
         self.assertEqual(job["descriptions"], [{"name": "Tasks", "value": "<p>dbt and SQL</p>"}])
         self.assertEqual(job["url"], "https://acme.jobs.personio.de/job/42")

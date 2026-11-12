@@ -9,13 +9,19 @@ CREATE SCHEMA silver;
 CREATE SCHEMA gold;
 
 -- One row per posting (source + source_id), from its newest snapshot.
+-- Postings of the same job share job_id; dashboards count jobs, see gold.jobs.
 CREATE TABLE silver.postings (
     source      text        NOT NULL,
     source_id   text        NOT NULL,
     title       text        NOT NULL,
     company     text,
-    location    text,
-    country     text,
+    employer    text,                 -- canonical name of a big tech employer, see jobpipe/employers.py
+    company_tier text       NOT NULL, -- faang, big_tech or other
+    location    text,                 -- as published
+    city        text,                 -- first city named, one spelling, see jobpipe/places.py
+    country     text,                 -- ISO 3166 alpha-2 of the first place; NULL when unknown
+    countries   text[]      NOT NULL, -- every country named, in order
+    remote      boolean     NOT NULL, -- the location offers remote work
     url         text,
     published   timestamptz,          -- event_time: when the source says it was posted
     first_seen  timestamptz NOT NULL, -- first snapshot that contained it
@@ -24,7 +30,10 @@ CREATE TABLE silver.postings (
     is_open     boolean     NOT NULL, -- still published, see current_postings in jobpipe/warehouse
     regions     text[]      NOT NULL, -- ch, es, eu; empty when unknown
     role        text        NOT NULL, -- role family key from the title, see jobpipe/roles.py
+    seniority   text        NOT NULL, -- level key from the title, see jobpipe/seniority.py
     technologies text[]     NOT NULL, -- technology keys from title and description, see jobpipe/tech.py
+    job_id      text        NOT NULL, -- source:source_id of the posting that stands for the job, see jobpipe/dedup.py
+    job_rank    integer     NOT NULL, -- 0 for that posting, 1.. for the other postings of the same job
     PRIMARY KEY (source, source_id)
 );
 
@@ -119,41 +128,80 @@ CREATE TABLE silver.load_log (
 CREATE INDEX ON silver.postings USING gin (regions);
 CREATE INDEX ON silver.postings USING gin (technologies);
 CREATE INDEX ON silver.postings (coalesce(published, first_seen));
+CREATE INDEX ON silver.postings (job_id);
 
--- Gold: views shaped for the dashboards. `region` is 'other' when unknown.
+-- Gold: views shaped for the dashboards. They count jobs, not postings: a job
+-- on its employer's board and on Adzuna, or listed once per city, counts once.
+-- `region` is 'other' when unknown.
 
-CREATE VIEW gold.posting_regions AS
-SELECT p.*, coalesce(r.region, 'other') AS region
+-- One row per job: its rank 0 posting, plus where and how often it was posted.
+CREATE VIEW gold.jobs AS
+WITH members AS (
+    SELECT job_id, count(*) AS postings, array_agg(DISTINCT source ORDER BY source) AS sources,
+           array_agg(DISTINCT city ORDER BY city) FILTER (WHERE city IS NOT NULL) AS cities,
+           bool_or(remote) AS any_remote
+    FROM silver.postings
+    GROUP BY job_id
+), places AS (
+    SELECT job_id, array_agg(DISTINCT c ORDER BY c) AS countries
+    FROM silver.postings
+    CROSS JOIN LATERAL unnest(countries) AS u(c)
+    GROUP BY job_id
+)
+SELECT p.*, coalesce(p.published, p.first_seen) AS posted_at,
+       m.postings, m.sources, coalesce(m.cities, '{}') AS cities, coalesce(c.countries, '{}') AS all_countries,
+       m.any_remote,
+       coalesce(nullif(concat_ws(' · ',
+           array_to_string(m.cities[1:3], ', ')
+             || CASE WHEN cardinality(m.cities) > 3 THEN ' +' || (cardinality(m.cities) - 3) ELSE '' END,
+           array_to_string(c.countries, ', ')), ''), p.location) AS place
 FROM silver.postings p
-LEFT JOIN LATERAL unnest(nullif(p.regions, '{}')) AS r(region) ON true;
+JOIN members m USING (job_id)
+LEFT JOIN places c USING (job_id)
+WHERE p.job_rank = 0;
 
+CREATE VIEW gold.job_regions AS
+SELECT j.*, coalesce(r.region, 'other') AS region
+FROM gold.jobs j
+LEFT JOIN LATERAL unnest(nullif(j.regions, '{}')) AS r(region) ON true;
+
+-- Salaries of one posting per job: the best-ranked one that states a salary,
+-- preferring a figure from the employer over an Adzuna estimate.
 CREATE VIEW gold.salaries AS
-SELECT s.*, p.title, p.role, p.company, p.location, p.country, p.url, p.regions,
+WITH chosen AS (
+    SELECT DISTINCT ON (p.job_id) p.source, p.source_id
+    FROM silver.postings p
+    JOIN silver.posted_salaries s USING (source, source_id)
+    ORDER BY p.job_id, s.predicted, p.job_rank
+)
+SELECT s.*, p.job_id, p.title, p.role, p.seniority, p.company, p.employer, p.company_tier, p.location, p.city, p.country, p.url, p.regions,
        coalesce(p.published, p.first_seen) AS posted_at
-FROM silver.posted_salaries s
+FROM chosen
+JOIN silver.posted_salaries s USING (source, source_id)
 JOIN silver.postings p USING (source, source_id);
 
+-- Jobs per month; `postings` counts jobs, each once.
 CREATE VIEW gold.postings_monthly AS
-SELECT date_trunc('month', coalesce(published, first_seen))::date AS month,
-       source, region, role, count(*) AS postings
-FROM gold.posting_regions
-GROUP BY 1, 2, 3, 4;
+SELECT date_trunc('month', posted_at)::date AS month,
+       source, region, role, seniority, company_tier, count(*) AS postings
+FROM gold.job_regions
+GROUP BY 1, 2, 3, 4, 5, 6;
 
--- Open postings that fit the profile: what the "For you" dashboard lists.
+-- Open jobs that fit the profile: what the "For you" dashboard lists.
 CREATE VIEW gold.feed AS
-SELECT p.source, p.source_id, p.title, p.company, p.location, p.country, p.url, p.regions, p.role,
-       p.first_seen, coalesce(p.published, p.first_seen) AS posted_at,
+SELECT j.source, j.source_id, j.title, j.company, j.employer, j.company_tier, j.place, j.country, j.url, j.regions, j.role, j.seniority,
+       j.first_seen, j.posted_at, j.postings, j.sources,
        m.score, m.rank, m.have, m.missing
-FROM silver.postings p
+FROM gold.jobs j
 JOIN silver.posting_matches m USING (source, source_id)
-WHERE p.is_open AND m.fits;
+WHERE j.is_open AND m.fits;
 
--- One row per posting and technology it asks for.
+-- One row per job and technology it asks for.
 CREATE VIEW gold.posting_technologies AS
-SELECT p.source, p.source_id, p.role, p.regions, p.is_open,
-       coalesce(p.published, p.first_seen) AS posted_at, t.key AS technology, t.label, t.category
-FROM silver.postings p
-CROSS JOIN LATERAL unnest(p.technologies) AS u(key)
+SELECT j.source, j.source_id, j.role, j.seniority, j.company_tier, j.regions, j.is_open, j.posted_at,
+       t.key AS technology, t.label, t.category
+FROM gold.jobs j
+CROSS JOIN LATERAL unnest(j.technologies) AS u(key)
 JOIN silver.technologies t USING (key);
 
 CREATE VIEW gold.source_health AS

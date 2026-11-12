@@ -12,8 +12,9 @@ import html
 import re
 import urllib.parse
 from collections import Counter
+from collections.abc import Iterable, Mapping
 from datetime import date
-from typing import Iterable, Mapping
+from typing import Any
 
 REGION_KEYWORDS: dict[str, str] = {
     "ch": r"switzerland|swiss|z[uü]rich|geneva|gen[eè]ve|lausanne|basel|bern|zug|lugano|winterthur",
@@ -67,16 +68,16 @@ def extract_boards(text: str) -> dict[str, set[str]]:
 
 
 def discover_from_hn(
-    records: Iterable[Mapping],
+    records: Iterable[Mapping[str, Any]],
     location_pattern: re.Pattern[str] = DEFAULT_LOCATION_PATTERN,
     since: date | None = None,
-) -> dict[str, Counter]:
+) -> dict[str, Counter[str]]:
     """Count, per ATS, how many matching HN postings link to each board.
 
     ``since`` drops postings published before that day: a board linked only in
     2014 is most likely gone, and checking it later costs a request for nothing.
     """
-    counts: dict[str, Counter] = {ats: Counter() for ats in BOARD_PATTERNS}
+    counts: dict[str, Counter[str]] = {ats: Counter() for ats in BOARD_PATTERNS}
     cutoff = since.isoformat() if since else None
     for record in records:
         if cutoff and (record.get("event_time") or "")[:10] < cutoff:
