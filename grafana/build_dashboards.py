@@ -44,7 +44,7 @@ REGIONS = {"ch": ("Switzerland", "Suiza"), "es": ("Spain", "España"), "eu": ("R
 REGION_COLORS = dict(zip(REGIONS, [BLUE, PURPLE, SKY, LAVENDER], strict=True))
 TIER_SQL = "company_tier IN ($tier)"
 SOURCES = ("hn", "greenhouse", "lever", "ashby", "smartrecruiters", "workable", "recruitee", "personio",
-           "adzuna", "adzuna_salary", "levelsfyi")
+           "manual", "adzuna", "adzuna_salary", "levelsfyi")
 
 
 def any_of(column, var):
@@ -277,6 +277,11 @@ def build(lang):
                 {"type": "link", "title": t("Español", "English"), "url": f"/d/{uid(name, other)}", "icon": "doc",
                  "tooltip": t("Ver en español", "View in English"), "includeVars": True, "keepTime": True,
                  "targetBlank": False, "asDropdown": False, "tags": []},
+                # Served by `jobpipe serve` (the "app" service in docker-compose.yml).
+                {"type": "link", "title": t("Add a posting", "Añadir oferta"), "url": f"http://localhost:8100/?lang={lang}",
+                 "icon": "external link", "tooltip": t("Add a posting by hand, e.g. from Google careers",
+                                                       "Añadir una oferta a mano, p. ej. de Google"),
+                 "includeVars": False, "keepTime": False, "targetBlank": True, "asDropdown": False, "tags": []},
             ],
             "panels": grid.done(),
         }  # fmt: skip

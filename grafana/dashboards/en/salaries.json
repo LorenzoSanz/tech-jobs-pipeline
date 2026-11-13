@@ -538,6 +538,18 @@
       "targetBlank": false,
       "asDropdown": false,
       "tags": []
+    },
+    {
+      "type": "link",
+      "title": "Add a posting",
+      "url": "http://localhost:8100/?lang=en",
+      "icon": "external link",
+      "tooltip": "Add a posting by hand, e.g. from Google careers",
+      "includeVars": false,
+      "keepTime": false,
+      "targetBlank": true,
+      "asDropdown": false,
+      "tags": []
     }
   ],
   "panels": [

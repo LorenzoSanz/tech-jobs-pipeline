@@ -259,9 +259,10 @@ class DashboardFilesTest(unittest.TestCase):
                 self.assertEqual([p["gridPos"] for p in en["panels"]], [p["gridPos"] for p in es["panels"]])
                 self.assertEqual([v["name"] for v in en["templating"]["list"]], [v["name"] for v in es["templating"]["list"]])
                 self.assertNotEqual(en["title"], es["title"])
-                [switch] = [link for link in en["links"] if link["type"] == "link"]
+                switch, add = [link for link in en["links"] if link["type"] == "link"]
                 self.assertEqual(switch["url"], f"/d/{es['uid']}")
                 self.assertTrue(switch["includeVars"])
+                self.assertEqual(add["url"], "http://localhost:8100/?lang=en")
 
     def test_every_filter_is_a_dropdown(self):
         for path in DASHBOARD_FILES:

@@ -8,6 +8,8 @@ class RoleTest(unittest.TestCase):
         cases = {
             "Senior Backend Engineer": "backend",
             "Data Engineer": "data",
+            "Software Engineer III, Data Protection Acceleration": "security",
+            "Privacy Engineer": "security",
             "Data Scientist": "ml",
             "Engineering Manager, Payments": "eng_management",
             "Head of Data": "eng_management",

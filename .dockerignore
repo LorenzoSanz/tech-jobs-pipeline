@@ -1,0 +1,7 @@
+data/
+private/
+.env
+.venv/
+config/profile.toml
+**/__pycache__/
+.git/

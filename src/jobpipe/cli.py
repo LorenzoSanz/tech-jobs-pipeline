@@ -24,7 +24,7 @@ from jobpipe import cv, employers, match, salary, tech
 from jobpipe.bronze import BronzeWriter, WriteResult, read_records
 from jobpipe.discovery import REGION_KEYWORDS, discover_from_hn, location_pattern
 from jobpipe.http import HttpClient, HttpError
-from jobpipe.sources import adzuna, ats, hn, levelsfyi
+from jobpipe.sources import adzuna, ats, hn, levelsfyi, manual
 from jobpipe.verification import render_toml, verify
 
 if TYPE_CHECKING:
@@ -52,6 +52,29 @@ def _summary(result: WriteResult, **extra: object) -> str:
 def _ingest_hn(args: argparse.Namespace, http: HttpClient, writer: BronzeWriter) -> int:
     result = writer.write(hn.SOURCE, hn.ingest(http, since=args.since))
     print(_summary(result))
+    return 0
+
+
+def _add(args: argparse.Namespace, http: HttpClient, writer: BronzeWriter) -> int:
+    description = ""
+    if args.description_file:
+        source = sys.stdin if str(args.description_file) == "-" else args.description_file.open(encoding="utf-8")
+        with source:
+            description = source.read()
+    item = manual.posting(args.title, args.company, args.location, args.country, args.url, description)
+    print(_summary(writer.write(manual.SOURCE, [item]), source_id=item.source_id))
+    return 0
+
+
+def _serve(args: argparse.Namespace) -> int:
+    from jobpipe import warehouse, web
+
+    def reload() -> str:
+        tables = warehouse.build(args.data_dir, _profile(args.profile, required=False))
+        counts = warehouse.write(args.dsn or warehouse.DEFAULT_DSN, tables)
+        return f"{counts['postings']} postings"
+
+    web.serve(args.host, args.port, BronzeWriter(args.data_dir), reload, args.public_port, args.grafana_url)
     return 0
 
 
@@ -439,6 +462,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="repeatable: --region ch --region es --region eu (default: ch)",
     )
 
+    add = commands.add_parser("add", help="add a posting by hand, from a site with no public API")
+    add.add_argument("--title", required=True)
+    add.add_argument("--company", required=True)
+    add.add_argument("--location", help="as written, e.g. 'Zurich, Switzerland'")
+    add.add_argument("--country", help="ISO code, e.g. ch")
+    add.add_argument("--url")
+    add.add_argument("--description-file", type=Path, help="the posting's text; - reads stdin")
+    add.set_defaults(handler=_add)
+
+    serve = commands.add_parser("serve", help="web form to add postings by hand; reloads the warehouse after each")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8100)
+    serve.add_argument("--public-port", type=int, help="port the browser uses, when it differs (docker)")
+    serve.add_argument("--grafana-url", default="http://localhost:3000")
+    serve.add_argument("--dsn", default=os.environ.get("JOBPIPE_DATABASE_URL"))
+    serve.add_argument("--profile", type=Path, default=DEFAULT_PROFILE)
+
     load = commands.add_parser("load", help="rebuild the PostgreSQL silver/gold layers from bronze")
     load.add_argument(
         "--dsn",
@@ -519,6 +559,8 @@ def main(argv: Sequence[str] | None = None, http: HttpClient | None = None) -> i
         return _verify_boards(args, http or HttpClient())
     if args.command == "load":
         return _load(args)
+    if args.command == "serve":
+        return _serve(args)
     if args.command == "feed":
         return _feed(args)
     if args.command == "cv":
