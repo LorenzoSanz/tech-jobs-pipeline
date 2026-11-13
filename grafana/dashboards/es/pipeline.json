@@ -49,6 +49,18 @@
       "targetBlank": false,
       "asDropdown": false,
       "tags": []
+    },
+    {
+      "type": "link",
+      "title": "Añadir oferta",
+      "url": "http://localhost:8100/?lang=es",
+      "icon": "external link",
+      "tooltip": "Añadir una oferta a mano, p. ej. de Google",
+      "includeVars": false,
+      "keepTime": false,
+      "targetBlank": true,
+      "asDropdown": false,
+      "tags": []
     }
   ],
   "panels": [
@@ -645,7 +657,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#6C9CF9"
+                  "fixedColor": "#6B9CF9"
                 }
               }
             ]
@@ -660,7 +672,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#7892F8"
+                  "fixedColor": "#7694F8"
                 }
               }
             ]
@@ -675,7 +687,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#8488F7"
+                  "fixedColor": "#818BF7"
                 }
               }
             ]
@@ -690,7 +702,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#907FF6"
+                  "fixedColor": "#8C82F6"
                 }
               }
             ]
@@ -705,7 +717,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#9C76F4"
+                  "fixedColor": "#977AF5"
                 }
               }
             ]
@@ -720,7 +732,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#A96CF3"
+                  "fixedColor": "#A271F4"
                 }
               }
             ]
@@ -735,7 +747,22 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#B562F2"
+                  "fixedColor": "#AD69F3"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "manual"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B860F2"
                 }
               }
             ]
@@ -750,7 +777,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#C159F1"
+                  "fixedColor": "#C357F1"
                 }
               }
             ]
@@ -765,7 +792,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#CD50F0"
+                  "fixedColor": "#CE4FF0"
                 }
               }
             ]

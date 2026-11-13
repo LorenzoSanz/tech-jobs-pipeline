@@ -17,7 +17,7 @@ from typing import Any
 from jobpipe import places, salary
 from jobpipe.bronze import read_records
 
-SOURCES = ("greenhouse", "lever", "ashby", "smartrecruiters", "workable", "recruitee", "personio", "adzuna", "hn")
+SOURCES = ("greenhouse", "lever", "ashby", "smartrecruiters", "workable", "recruitee", "personio", "manual", "adzuna", "hn")
 REGION_OF = {"CH": "ch", "ES": "es", **{iso.upper(): "eu" for iso in salary.EUROPE_ISO}}
 
 
@@ -144,6 +144,10 @@ def _adzuna(record: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _manual(record: Mapping[str, Any]) -> dict[str, Any]:
+    return dict(record["payload"])
+
+
 def _hn(record: Mapping[str, Any]) -> dict[str, Any]:
     comment = record["payload"]["comment"]
     header = salary.plain_text(comment["text"].split("<p>")[0]).strip()
@@ -165,6 +169,7 @@ FIELDS: dict[str, Callable[[Mapping[str, Any]], dict[str, Any]]] = {
     "workable": _workable,
     "recruitee": _recruitee,
     "personio": _personio,
+    "manual": _manual,
     "adzuna": _adzuna,
     "hn": _hn,
 }

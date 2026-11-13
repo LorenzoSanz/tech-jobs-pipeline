@@ -286,6 +286,12 @@ def _hn(record: Mapping[str, Any]) -> Iterator[PostedSalary]:
     yield from _from_text(record, header[:200], company, header, None, text, url)
 
 
+def _manual(record: Mapping[str, Any]) -> Iterator[PostedSalary]:
+    job = record["payload"]
+    text = plain_text(job.get("description") or "")
+    yield from _from_text(record, job.get("title"), job.get("company"), job.get("location"), job.get("country"), text, job.get("url"))
+
+
 def _from_text(
     record: Mapping[str, Any], title: str | None, company: str | None, location: str | None,
     country: str | None, text: str, url: str | None,
@@ -309,7 +315,8 @@ def _posted(
 
 EXTRACTORS = {
     "ashby": _ashby, "lever": _lever, "greenhouse": _greenhouse, "smartrecruiters": _smartrecruiters,
-    "workable": _workable, "recruitee": _recruitee, "personio": _personio, "adzuna": _adzuna, "hn": _hn,
+    "workable": _workable, "recruitee": _recruitee, "personio": _personio, "manual": _manual, "adzuna": _adzuna,
+    "hn": _hn,
 }  # fmt: skip
 
 

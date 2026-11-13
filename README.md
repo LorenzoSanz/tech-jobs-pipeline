@@ -112,7 +112,18 @@ Big tech employers are recognised whatever name they publish under
 ("Google Switzerland GmbH", "Amazon Web Services EMEA SARL"), see
 `src/jobpipe/employers.py`. FAANG career sites have no public API and Amazon's
 terms forbid automated access, so their postings come from Adzuna and HN only
-([ADR 0009](docs/adr/0009-big-tech-employers.md)). Many other big tech
+([ADR 0009](docs/adr/0009-big-tech-employers.md)). A posting seen on one of
+those sites can be added by hand, from the **Add a posting** button at the top
+of every dashboard (a form served by `jobpipe serve`, the `app` service in
+docker compose, on 127.0.0.1:8100; the dashboards reload a few seconds later),
+or from the command line:
+
+```bash
+jobpipe add --title "Software Engineer III" --company Google --location "Zurich, Switzerland" \
+  --country ch --url https://... --description-file posting.txt
+```
+
+Many other big tech
 companies publish on public boards and are collected directly: Databricks,
 OpenAI, Anthropic, Snowflake, Spotify, Airbnb, LinkedIn, ServiceNow, Wise and
 about 35 more, all in `config/boards.toml`.

@@ -261,6 +261,18 @@
       "targetBlank": false,
       "asDropdown": false,
       "tags": []
+    },
+    {
+      "type": "link",
+      "title": "Añadir oferta",
+      "url": "http://localhost:8100/?lang=es",
+      "icon": "external link",
+      "tooltip": "Añadir una oferta a mano, p. ej. de Google",
+      "includeVars": false,
+      "keepTime": false,
+      "targetBlank": true,
+      "asDropdown": false,
+      "tags": []
     }
   ],
   "panels": [

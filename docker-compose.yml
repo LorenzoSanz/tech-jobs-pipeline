@@ -46,6 +46,23 @@ services:
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
 
+  # Form behind the "Add a posting" link: writes to ./data/bronze, then reloads the warehouse.
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    image: jobpipe-app:0.1.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      JOBPIPE_DATABASE_URL: postgresql://jobpipe:${POSTGRES_PASSWORD:-jobpipe}@postgres:5432/jobpipe
+    ports:
+      - "127.0.0.1:8100:8100"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+
 volumes:
   pgdata:
   grafana-data:

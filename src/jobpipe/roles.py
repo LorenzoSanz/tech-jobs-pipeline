@@ -36,10 +36,11 @@ FAMILIES: tuple[Family, ...] = (
            r"|\bcto\b|\bvp,? (of )?engineering|director,? (of )?engineering"),
     Family("ml", "ML / AI", "ML / IA",
            r"machine learning|\bml\b|\bai\b|\bllm|deep learning|computer vision|\bnlp\b|scientist|research engineer"),
-    Family("data", "Data", "Datos", r"\bdata\b|analytics|analyst|\bbi\b|\betl\b|\bdbt\b"),
+    # "Data Protection" and "Data Privacy" are security work, not data work.
+    Family("data", "Data", "Datos", r"\bdata\b(?! (?:protection|privacy|security))|analytics|analyst|\bbi\b|\betl\b|\bdbt\b"),
     Family("devops", "DevOps / SRE / Platform", "DevOps / SRE / Plataforma",
            r"devops|\bsre\b|site reliability|platform|infrastructure|\bcloud\b|kubernetes|\bops\b"),
-    Family("security", "Security", "Seguridad", r"security|appsec|pentest|\bsoc\b"),
+    Family("security", "Security", "Seguridad", r"security|appsec|pentest|\bsoc\b|data protection|privacy"),
     Family("mobile", "Mobile", "Móvil", r"\bios\b|android|mobile|flutter|react native"),
     Family("qa", "QA / Testing", "QA / Test", r"\bqa\b|quality|\btest|sdet"),
     Family("embedded", "Embedded / Hardware", "Embebido / Hardware",
