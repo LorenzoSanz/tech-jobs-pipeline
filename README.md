@@ -1,6 +1,6 @@
-# Swiss Tech Jobs Pipeline
+# Tech Jobs Pipeline
 
-A data pipeline that collects public tech job postings for **Switzerland, Spain and the rest of Europe** and turns
+A data pipeline that collects public tech job postings across **Europe** (Spain, Germany, Switzerland and more) and turns
 them into a dated dataset of what the market asks for: technologies, roles, seniority and salaries, month by month.
 It ends in Grafana dashboards and in reports that compare a CV with the postings that fit it.
 
@@ -158,7 +158,7 @@ Ingestion, the silver layer and the dashboards are working. Next steps:
 
 - [ ] Daily scheduling with CronJobs on a local Kubernetes (k3d) cluster
 - [ ] Gold models in dbt
-- [ ] More Swiss and Spanish sources
+- [ ] More European sources (German and Spanish job boards)
 - [ ] Alerts when a source returns nothing
 
 Kafka was considered and left out: sources are polled once a day, so a queue would add moving parts without

@@ -5,7 +5,7 @@
 
 ## Context
 
-The goal is a dataset that reflects the Swiss tech job market as closely as
+The goal is a dataset that reflects the European tech job market as closely as
 possible: real postings, with reliable dates, in volume, and collected the same
 way over time so that trends are comparable.
 

@@ -14,8 +14,8 @@ Cloud Talent Solution, which was a product for other employers anyway;
 Netflix's portal runs on Eightfold, whose API is for its clients only; and
 Amazon's conditions of use forbid automated access without written
 permission. Scraping them would break ADR 0001 (only APIs meant for third
-parties), and a job search tool that scrapes the companies it applies to is a
-poor thing to show them.
+parties), and a tool that scrapes the very companies it reports on is a poor
+thing to show them.
 
 ## Decision
 

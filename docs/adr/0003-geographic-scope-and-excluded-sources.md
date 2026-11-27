@@ -5,9 +5,9 @@
 
 ## Context
 
-Switzerland is the main target, but Spain (home market and fallback) and the
-rest of Europe (remote roles, Germany, the Netherlands) are needed to compare
-salaries and demand and to keep options open.
+The dataset covers Europe: Spain (home market), Germany, Switzerland, the
+Netherlands and remote roles, so that salaries and demand can be compared
+across markets.
 
 LinkedIn and jobs.ch hold some of the best job data for these markets, so
 excluding them needs an explicit reason.
@@ -37,8 +37,7 @@ Both forbid automated collection in their terms:
 
 Three reasons make this a hard exclusion for this project, beyond the legal risk:
 
-1. **The collector would run from the author's own accounts** during a job
-   search. A restricted LinkedIn account costs far more than the data is worth.
+1. **The collector would run from the author's own accounts.** A restricted LinkedIn account costs far more than the data is worth.
 2. **The project is public.** A portfolio repository that breaks the terms of
    the platforms recruiters use is a liability in exactly the interviews it is
    meant to help with.
